@@ -1,7 +1,7 @@
 {
-    "name": "yzh/xlswrite",
+    "name": "yzh0325/xlswrite",
     "description": "xlswrite excle export and import ,WebSocket client and server",
-    "license": "NPN",
+    "license": "proprietary",
     "type": "library",
     "authors": [
         {
