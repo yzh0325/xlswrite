@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>xlswrite demo</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+</head>
+<body>
+<script src="./static/layui/layui.all.js"></script>
+<button type="button" class="layui-btn" id="test1">
+    <i class="layui-icon">&#xe67c;</i>导入excel
+</button>
+<button type="button" class="layui-btn" id="test2" onclick="exporData()">
+    <i class="layui-icon">&#xe601;</i>导出excel
+</button>
+</body>
+<script>
+    var layer = layui.layer, $ = layui.jquery, upload = layui.upload;
+    var loading, fileLoading;
+    var wsServer = 'ws://192.168.18.192:9502';
+    var websocket = new WebSocket(wsServer);
+    var fd = 0;//客户端socket id
+
+    //文件上传 & 导入数据
+    var uploadInst = upload.render({
+        elem: '#test1' //绑定元素
+        , accept: 'file'
+        , method: 'post'
+        , url: '/upload.php' //上传接口
+        , before: function (obj) { //obj参数包含的信息，跟 choose回调完全一致，可参见上文。
+            fileLoading = layer.load(); //上传loading
+        }
+        , done: function (res) {
+            //上传完毕回调
+            if (res.code == 1) {
+                console.log(res.file);
+                layer.close(fileLoading);
+                layer.msg('文件上传完成,开始处理数据');
+                importData(res.file);
+            }
+        }
+        , error: function (e) {
+            //请求异常回调
+            console.log(res);
+        }
+    });
+
+    //导出excel
+    function exporData() {
+        loading = layer.load(2, {
+            shade: [0.1, '#fff'],
+            content: '正在到导出，请耐心等待...',
+            id: 'process',
+            success: function (layero) {
+                layero.find('.layui-layer-content').css({
+                    'padding-top': '40px',//图标与样式会重合，这样设置可以错开
+                    'width': '200px',//文字显示的宽度
+                    'text-indent': '-4rem',
+                });
+            }
+        });
+        //请求后台excel文件生成
+        $.get('/export_demo.php', {fd: fd}, function (res) {
+            if (res.code == 1) {
+                layer.close(loading);
+                layer.msg(res.msg, {time: '1000'}, function () {
+                    //请求后台获取下载地址
+                    window.location.href = res.url;
+                });
+            }
+        }, 'json');
+    }
+
+    //导入excel
+    function importData(filename) {
+        // 开启 loading 效果
+        loading = layer.load(2, {
+            shade: [0.1, '#fff'],
+            id: 'process',
+            content: '正在处理数据，请耐心等待...',
+            success: function (layero) {
+                layero.find('.layui-layer-content').css({
+                    'padding-top': '40px',//图标与样式会重合，这样设置可以错开
+                    'width': '200px',//文字显示的宽度
+                    'text-indent': '-4rem',
+                });
+            }
+        });
+        $.get('/import_demo.php', {file: filename, fd: fd}, function (res) {
+            console.log(res);
+            if (res.code == 1) {
+                layer.msg(res.msg, {}, function () {
+                    layer.closeAll();
+                });
+
+            }
+        }, 'json');
+    }
+
+    websocket.onopen = function (evt) {
+        console.log("Connected to WebSocket server.");
+    };
+
+    websocket.onclose = function (evt) {
+        console.log("Disconnected");
+    };
+
+    websocket.onmessage = function (evt) {
+        var data = JSON.parse(evt.data);
+        if (data.status == 'onopen') {
+            fd = data.fd;
+        } else {
+            $('#process').text('已处理' + data.process + '条数据...');
+            // console.log(data.process);
+        }
+        // console.log('Retrieved data from server: ' + data);
+    };
+
+    websocket.onerror = function (evt, e) {
+        console.log('Error occured: ' + evt.data);
+    };
+
+</script>
+</html>
