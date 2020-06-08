@@ -39,9 +39,18 @@ $defaultStyle = $fileObj->styleFormat()
     ->align(Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER)
     ->toResource();
 
-$filePath = $fileObj->header(array('id', 'c1', 'c2', 'c3', 'c4','c5'))//设置表格头
+//定义字段
+$field = [
+    'id'=>['name'=>'title','callback'=>'myFormat'],//callback 回调处理格式化值 可以是函数/对象方法
+    'c1'=>['name'=>'age'],
+    'c2'=>['name'=>'year'],
+    'c3'=>['name'=>'kk'],
+    'c4'=>['name'=>'ll'],
+    'c5'=>['name'=>'aa']
+];
+$filePath = $fileObj->field($field)//设置字段&表格头
     ->defaultFormat($defaultStyle)//全局默认样式
-    ->setDataByGenerator('generateData',$pushHandle)//设置数据，$pushHandle 用于推送，可不传
+    ->setDataByGenerator('generateData',$pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可不传
     ->setRow('A1:A3', 80, $leftStyle)//设置范围行样式
     ->setRow('A2',50,$borderStyle)//设置指定某一行样式
     ->setRow('A3',50,$colorStyle)//设置文字颜色
@@ -72,4 +81,8 @@ function generateData(){
     for ($i = 0; $i < 100000; $i = $i + $step) {
         yield $db->get_records_sql("select * from sheet1 limit {$i},{$step}", null, PDO::FETCH_ASSOC);
     }
+}
+//格式化字段值
+function myFormat($v,$valuse){
+    return $v.$valuse['c1'];
 }

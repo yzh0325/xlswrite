@@ -6,6 +6,7 @@
 namespace Pxlswrite;
 set_time_limit(0);
 
+use http\Header;
 use Pxlswrite\WebSocket\WebSocketClient;
 use \Vtiful\Kernel\Format;
 use \Vtiful\Kernel\Excel;
@@ -65,6 +66,12 @@ class Pxlswrite extends Excel
     protected $m_config = [
         'path' => __DIR__,
     ];
+    /**
+     * [$fieldsCallback 设置字段回调函数]
+     * @var array
+     */
+    public $fieldsCallback = [];
+    public $header = [];
 
     /**
      * Pxlswrite constructor.
@@ -91,6 +98,41 @@ class Pxlswrite extends Excel
     }
 
     /**
+     * 设置字段
+     * @param $field
+     * @return $this
+     */
+    public function field($field)
+    {
+        if (!empty($field)) {
+            $this->fieldsCallback = array_merge($this->fieldsCallback, $field);
+        }
+        if (empty($this->header)) {
+            $this->header(array_column($field, 'name'));
+        }
+        return $this;
+    }
+
+    /**
+     * 设置表格头
+     * @param $header
+     * @param null $format_handle
+     * @return mixed
+     */
+    public function header($header, $format_handle = NULL)
+    {
+        if(count($header) !== count($header, 1)){
+            echo '数据格式错误,必须是一位数索引数组';exit();
+        }
+        $this->header = $header;
+        if ($format_handle) {
+            return parent::header($header, $format_handle);
+        } else {
+            return parent::header($header);
+        }
+    }
+
+    /**
      * 设置表格数据
      * @param array $_data 二维索引数组
      * @return
@@ -109,16 +151,25 @@ class Pxlswrite extends Excel
     public function setDataByGenerator($_generator, WebSocketClient $_pushHandle = null)
     {
         $count = 0;
-        foreach ($_generator() as $item) {
+        foreach (call_user_func($_generator) as $item) {
             //循环逐行写入excel
-            foreach ($item as $value) {
-                $this->data([array_values($value)]);//二维索引数组
+            foreach ($item as $key => $value) {
+                if(!empty($this->fieldsCallback)){
+                    $temp = [];
+                    foreach ($this->fieldsCallback as $k => $v) {
+                        $temp[$k] = isset($value[$k]) && !empty($value[$k]) ? $value[$k] : '';
+                        if (isset($v['callback'])) {
+                            $temp[$k] = call_user_func($v['callback'], $temp[$k], $value);
+                        }
+                    }
+                    $this->data([array_values($temp)]);//二维索引数组
+                }else{
+                    $this->data([array_values($value)]);//二维索引数组
+                }
             }
             //推送消息
-            if ($_pushHandle && $_pushHandle->m_receiverFd) {
-                $count += count($item);
-                $_pushHandle->send(['status' => 'processing', 'process' => $count]);
-            }
+            $count += count($item);
+            $this->push($_pushHandle,$count);
         }
         return $this;
     }
@@ -136,22 +187,22 @@ class Pxlswrite extends Excel
             $count++;
             if ($count % 10000 == 0) {
                 //回调数据插入的方法
-                $_func($data);
+                call_user_func($_func,$data);
                 //消息推送
-                if ($_pushHandle && $_pushHandle->m_receiverFd) {
-                    $_pushHandle->send(['status' => 'processing', 'process' => $count]);
-                }
+                $this->push($_pushHandle,$count);
                 unset($data);
             }
         }
         if (!empty($data)) {
-            $_func($data);
-            if ($_pushHandle && $_pushHandle->m_receiverFd) {
-                $_pushHandle->send(['status' => 'processing', 'process' => $count]);
-            }
+            call_user_func($_func,$data);
+            $this->push($_pushHandle,$count);
         }
     }
-
+    public function push($_pushHandle,$count){
+        if ($_pushHandle && $_pushHandle->m_receiverFd) {
+            $_pushHandle->send(['status' => 'processing', 'process' => $count]);
+        }
+    }
     /**
      * 文件下载
      * @param $_filePath 文件绝对路径
@@ -161,8 +212,9 @@ class Pxlswrite extends Excel
     public function download($_filePath, $_isDelete = true)
     {
 //        setcookie("loadingFlag",1);
-        if(dirname($_filePath) != $this->m_config['path']){
-            echo '未知文件路径';exit();
+        if (dirname($_filePath) != $this->m_config['path']) {
+            echo '未知文件路径';
+            exit();
         }
         header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         header('Content-Disposition: attachment;filename="' . end(explode('/', $_filePath)) . '"');
