@@ -186,12 +186,13 @@ class Pxlswrite extends Excel
     /**
      * @param $_func string 方法名 回调数据插入的方法
      * @param WebSocketClient|null $_pushHandle
+     * @param array $_dataType 可指定每个单元格数据类型进行读取
      */
-    public function importData($_func, WebSocketClient $_pushHandle = null)
+    public function importData($_func, WebSocketClient $_pushHandle = null,array $_dataType = [])
     {
         $count = 0;
         //游标读取excel数据 每一万条数据执行一次插入数据库 防止数据装载在内存过大
-        while ($res = $this->nextRow()) {
+        while ($res = $this->nextRow($_dataType)) {
             $data[] = $res;
             $count++;
             if ($count % 10000 == 0) {
