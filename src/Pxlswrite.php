@@ -1,12 +1,11 @@
 <?php
 /**
- * xlsxwrite简单封装
+ * xlsxwriter简单封装
  */
 
 namespace Pxlswrite;
 set_time_limit(0);
 
-use http\Header;
 use Pxlswrite\WebSocket\WebSocketClient;
 use \Vtiful\Kernel\Format;
 use \Vtiful\Kernel\Excel;
@@ -151,25 +150,35 @@ class Pxlswrite extends Excel
     public function setDataByGenerator($_generator, WebSocketClient $_pushHandle = null)
     {
         $count = 0;
-        foreach (call_user_func($_generator) as $item) {
-            //循环逐行写入excel
-            foreach ($item as $key => $value) {
-                if(!empty($this->fieldsCallback)){
+        //判断是否有定义字段
+        if(!empty($this->fieldsCallback)){
+            foreach (call_user_func($_generator) as $item){
+                foreach ($item as $value){
                     $temp = [];
-                    foreach ($this->fieldsCallback as $k => $v) {
+                    //字段过滤
+                    foreach ($this->fieldsCallback as $k=>$v){
                         $temp[$k] = isset($value[$k]) && !empty($value[$k]) ? $value[$k] : '';
+                        //回调字段处理方法
                         if (isset($v['callback'])) {
                             $temp[$k] = call_user_func($v['callback'], $temp[$k], $value);
                         }
                     }
                     $this->data([array_values($temp)]);//二维索引数组
-                }else{
+                }
+                //推送消息
+                $count += count($item);
+                $this->push($_pushHandle,$count);
+            }
+        }else{
+            foreach (call_user_func($_generator) as $item){
+                //循环逐行写入excel
+                foreach ($item as $value){
                     $this->data([array_values($value)]);//二维索引数组
                 }
+                //推送消息
+                $count += count($item);
+                $this->push($_pushHandle,$count);
             }
-            //推送消息
-            $count += count($item);
-            $this->push($_pushHandle,$count);
         }
         return $this;
     }
@@ -198,6 +207,12 @@ class Pxlswrite extends Excel
             $this->push($_pushHandle,$count);
         }
     }
+
+    /**
+     * 消息推送
+     * @param $_pushHandle
+     * @param $count
+     */
     public function push($_pushHandle,$count){
         if ($_pushHandle && $_pushHandle->m_receiverFd) {
             $_pushHandle->send(['status' => 'processing', 'process' => $count]);

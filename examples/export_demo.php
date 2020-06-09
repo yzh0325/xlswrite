@@ -41,12 +41,12 @@ $defaultStyle = $fileObj->styleFormat()
 
 //定义字段
 $field = [
-    'id'=>['name'=>'title','callback'=>'myFormat'],//callback 回调处理格式化值 可以是函数/对象方法
+    'id'=>['name'=>'title'],
     'c1'=>['name'=>'age'],
     'c2'=>['name'=>'year'],
     'c3'=>['name'=>'kk'],
     'c4'=>['name'=>'ll'],
-    'c5'=>['name'=>'aa']
+    'c5'=>['name'=>'aa','callback'=>'myFormat']//callback 回调处理格式化值 可以是函数/对象方法
 ];
 $filePath = $fileObj->field($field)//设置字段&表格头
     ->defaultFormat($defaultStyle)//全局默认样式
@@ -55,7 +55,7 @@ $filePath = $fileObj->field($field)//设置字段&表格头
     ->setRow('A2',50,$borderStyle)//设置指定某一行样式
     ->setRow('A3',50,$colorStyle)//设置文字颜色
     ->setRow('A4',40,$backgroundStyle)//设置背景色
-    ->setColumn('B:B',50,$numberStyle)//设置列样式
+    ->setColumn('F:F',40,$numberStyle)//设置列样式
     ->mergeCells('A1:C1', 'Merge cells',$fileObj->styleFormat()->align(Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER)->toResource())//合并单元格
     ->output();//输出excel文件到磁盘
 
@@ -74,15 +74,15 @@ $execute_time = time() - $time . 's';
 //ajax请求返回下载地址
 echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?file=' . $filePath, 'data' => ['memory' => $memory, 'excute_time' => $execute_time]]);
 
-//数据生成器--封装数据获取的方法
+//数据生成器--封装模拟数据获取的方法
 function generateData(){
     $db = DB::getInstance();
     $step = 10000;
-    for ($i = 0; $i < 100000; $i = $i + $step) {
+    for ($i = 0; $i < 1000000; $i = $i + $step) {
         yield $db->get_records_sql("select * from sheet1 limit {$i},{$step}", null, PDO::FETCH_ASSOC);
     }
 }
 //格式化字段值
-function myFormat($v,$valuse){
-    return $v.$valuse['c1'];
+function myFormat($v,$values){
+    return $v.'自定义格式化-'.$values['id'];
 }
