@@ -70,6 +70,9 @@ class Pxlswrite extends Excel
      * @var array
      */
     public $fieldsCallback = [];
+    /**
+     * @var array
+     */
     public $header = [];
 
     /**
@@ -82,7 +85,6 @@ class Pxlswrite extends Excel
             $this->m_config[$k] = $v;
         }
         parent::__construct($this->m_config);
-//        $this->m_instance = new \Vtiful\Kernel\Excel($this->m_config);
     }
 
     /**
@@ -100,6 +102,7 @@ class Pxlswrite extends Excel
      * 设置字段
      * @param $field
      * @return $this
+     * @throws \Exception
      */
     public function field($field)
     {
@@ -117,11 +120,12 @@ class Pxlswrite extends Excel
      * @param $header
      * @param null $format_handle
      * @return mixed
+     * @throws \Exception
      */
     public function header($header, $format_handle = NULL)
     {
-        if(count($header) !== count($header, 1)){
-            echo '数据格式错误,必须是一位数索引数组';exit();
+        if (count($header) !== count($header, 1)) {
+            throw new \Exception('header数据格式错误,必须是一位数索引数组');
         }
         $this->header = $header;
         if ($format_handle) {
@@ -151,12 +155,12 @@ class Pxlswrite extends Excel
     {
         $count = 0;
         //判断是否有定义字段
-        if(!empty($this->fieldsCallback)){
-            foreach (call_user_func($_generator) as $item){
-                foreach ($item as $value){
+        if (!empty($this->fieldsCallback)) {
+            foreach (call_user_func($_generator) as $item) {
+                foreach ($item as $value) {
                     $temp = [];
                     //字段过滤
-                    foreach ($this->fieldsCallback as $k=>$v){
+                    foreach ($this->fieldsCallback as $k => $v) {
                         $temp[$k] = isset($value[$k]) && !empty($value[$k]) ? $value[$k] : '';
                         //回调字段处理方法
                         if (isset($v['callback'])) {
@@ -167,28 +171,29 @@ class Pxlswrite extends Excel
                 }
                 //推送消息
                 $count += count($item);
-                $this->push($_pushHandle,$count);
+                $this->push($_pushHandle, $count);
             }
-        }else{
-            foreach (call_user_func($_generator) as $item){
+        } else {
+            foreach (call_user_func($_generator) as $item) {
                 //循环逐行写入excel
-                foreach ($item as $value){
+                foreach ($item as $value) {
                     $this->data([array_values($value)]);//二维索引数组
                 }
                 //推送消息
                 $count += count($item);
-                $this->push($_pushHandle,$count);
+                $this->push($_pushHandle, $count);
             }
         }
         return $this;
     }
 
     /**
+     * 导入数据
      * @param $_func string 方法名 回调数据插入的方法
      * @param WebSocketClient|null $_pushHandle
      * @param array $_dataType 可指定每个单元格数据类型进行读取
      */
-    public function importData($_func, WebSocketClient $_pushHandle = null,array $_dataType = [])
+    public function importData($_func, WebSocketClient $_pushHandle = null, array $_dataType = [])
     {
         $count = 0;
         //游标读取excel数据 每一万条数据执行一次插入数据库 防止数据装载在内存过大
@@ -197,15 +202,15 @@ class Pxlswrite extends Excel
             $count++;
             if ($count % 10000 == 0) {
                 //回调数据插入的方法
-                call_user_func($_func,$data);
+                call_user_func($_func, $data);
                 //消息推送
-                $this->push($_pushHandle,$count);
+                $this->push($_pushHandle, $count);
                 unset($data);
             }
         }
         if (!empty($data)) {
-            call_user_func($_func,$data);
-            $this->push($_pushHandle,$count);
+            call_user_func($_func, $data);
+            $this->push($_pushHandle, $count);
         }
     }
 
@@ -214,23 +219,29 @@ class Pxlswrite extends Excel
      * @param $_pushHandle
      * @param $count
      */
-    public function push($_pushHandle,$count){
-        if ($_pushHandle && $_pushHandle->m_receiverFd) {
-            $_pushHandle->send(['status' => 'processing', 'process' => $count]);
+    public function push($_pushHandle, $count)
+    {
+        try {
+            if ($_pushHandle && $_pushHandle->m_receiverFd) {
+                $_pushHandle->send(['status' => 'processing', 'process' => $count]);
+            }
+        } catch (\Exception $exception) {
+            $this->writeLog($exception->getMessage(), [$exception->getTraceAsString()]);
         }
+
     }
+
     /**
      * 文件下载
      * @param $_filePath 文件绝对路径
      * @param bool $_isDelete 下载后是否删除原文件
-     * @return string
+     * @throws \Exception
      */
     public function download($_filePath, $_isDelete = true)
     {
 //        setcookie("loadingFlag",1);
         if (dirname($_filePath) != $this->m_config['path']) {
-            echo '未知文件路径';
-            exit();
+            throw new \Exception('未知文件路径');
         }
         header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         header('Content-Disposition: attachment;filename="' . end(explode('/', $_filePath)) . '"');
@@ -275,12 +286,110 @@ class Pxlswrite extends Excel
         return $data;
     }
 
-    /**
-     * 样式容器
-     * @return Format
-     */
-    public function styleFormat()
+    public function writeLog($_message, array $_arr)
     {
-        return new Format($this->getHandle());
+        $dir = rtrim($this->m_config['path'], '/') . '/log/';
+        if (!is_dir($dir)) {
+            mkdir($dir);
+        }
+        $time = date('Y-m-d H:i:s');
+        file_put_contents($dir . date("Y-m-d") . "_error.log", "[{$time}] " . $_message . PHP_EOL . serialize($_arr) . PHP_EOL, FILE_APPEND);
+    }
+
+    /**
+     * 格式化样式
+     * @param array $_style 样式列表数组
+     * @return Format resource
+     * @throws \Exception
+     */
+    public function styleFormat($_style)
+    {
+        $format = new Format($this->getHandle());
+        $_style = empty($_style) ? [] : $_style;
+        foreach ($_style as $key => $value) {
+            switch ($key) {
+                case 'align':
+                    if (!is_array($value) || count($value) != 2) {
+                        throw new \Exception('align 数据格式错误');
+                    }
+                    $format->align($value[0], $value[1]);
+                    break;
+                default:
+                    if (is_bool($value)) {
+                        if ($value === true) {
+                            $format->$key();
+                        }
+                    } else {
+                        $format->$key($value);
+                    }
+            }
+        }
+        return $format->toResource();
+    }
+
+    /**
+     * 行单元格样式
+     * @param $range string 单元格范围
+     * @param $height double 单元格高度
+     * @param null $formatHandler resource|array 单元格样式
+     * @return $this
+     * @throws \Exception
+     */
+    public function setRow($range, $height, $formatHandler = null)
+    {
+        if (!is_resource($formatHandler)) {
+            $formatHandler = $this->styleFormat($formatHandler);
+        }
+        parent::setRow($range, $height, $formatHandler);
+        return $this;
+    }
+
+    /**
+     * 列单元格样式
+     * @param $range string 单元格范围
+     * @param $width double 单元格宽度
+     * @param null $formatHandler resource|array 单元格样式
+     * @return $this
+     * @throws \Exception
+     */
+    public function setColumn($range, $width, $formatHandler = null)
+    {
+        if (!is_resource($formatHandler)) {
+            $formatHandler = $this->styleFormat($formatHandler);
+        }
+        parent::setColumn($range, $width, $formatHandler);
+        return $this;
+    }
+
+    /**
+     * 合并单元格
+     * @param $scope  string 单元格范围
+     * @param $data   string data
+     * @param null $formatHandler resource|array style
+     * @return $this
+     * @throws \Exception
+     */
+    public function mergeCells($scope, $data, $formatHandler = null)
+    {
+        if (!is_resource($formatHandler)) {
+            $formatHandler = $this->styleFormat($formatHandler);
+        }
+        parent::mergeCells($scope, $data, $formatHandler);
+        return $this;
+    }
+
+    /**
+     * 全局默认样式
+     * @param $formatHandler resource|array style
+     * @return $this
+     * @throws \Exception
+     */
+    public function defaultFormat($formatHandler)
+    {
+        if (!is_resource($formatHandler)) {
+            $formatHandler = $this->styleFormat($formatHandler);
+        }
+        parent::defaultFormat($formatHandler);
+        return $this;
     }
 }
