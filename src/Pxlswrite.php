@@ -74,6 +74,14 @@ class Pxlswrite extends Excel
      * @var array
      */
     public $header = [];
+    /**
+     * 单元格字段范围
+     */
+    const CELLRANGE = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    /**
+     * @var resource 默认样式
+     */
+    public $m_defaultStyle;
 
     /**
      * Pxlswrite constructor.
@@ -146,28 +154,61 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 通过生成器按行向表格插入数据
-     * @param $_generator
+     * 通过生成器逐行向表格插入数据，
+     * 设置过field才支持动态单元格合并，
+     * 可以根据指定的字段 通过值比较自动进行 行合并
+     * @param $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
+     * [['id'=>1,'name'=>'张三','age'=>'18']]
+     * @param array $_mergeColumn 需要合并的字段
+     * @param array $_mergeColumnStyle 合并单元格的样式
+     * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @param WebSocketClient $_pushHandle
      * @return Pxlswrite
+     * @throws \Exception
      */
-    public function setDataByGenerator($_generator, WebSocketClient $_pushHandle = null)
+    public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
-        $count = 0;
-        //判断是否有定义字段
+        $count = 0;//统计数据处理条数
+        $cellKey = [];//装载需要合并的字段
+        $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
+        foreach ($_mergeColumn as $k => $v) {
+            $key = array_search($v, array_keys($this->fieldsCallback));
+            $cellKey[$v] = self::CELLRANGE[$key];
+            //临时存放需要合并的值
+            $tempValue[$v] = [
+                'count' => 0,
+                'value' => null,
+            ];
+        }
+        //判断是否有定义字段 有则进行字段格式化&字段过滤
         if (!empty($this->fieldsCallback)) {
             foreach (call_user_func($_generator) as $item) {
                 foreach ($item as $value) {
-                    $temp = [];
-                    //字段过滤
-                    foreach ($this->fieldsCallback as $k => $v) {
-                        $temp[$k] = isset($value[$k]) && !empty($value[$k]) ? $value[$k] : '';
-                        //回调字段处理方法
-                        if (isset($v['callback'])) {
-                            $temp[$k] = call_user_func($v['callback'], $temp[$k], $value);
+                    $_index++;//单元行自增
+                    $temp = $this->filter($value);
+                    $this->data([array_values($temp)]);//二维索引数组
+                    //处理需要合并的单元格
+                    foreach ($cellKey as $c => $cell) {
+                        if ($tempValue[$c]['count'] == 0) {
+                            $tempValue[$c]['value'] = $temp[$c];
+                        }
+                        if ($temp[$c] == $tempValue[$c]['value']) {
+                            $cellMerge[$c][] = $cell . $_index;
+                            $tempValue[$c]['count']++;
+                        }
+                        //当前单元格与前一单元格值不在相等时合并单元格
+                        if ($temp[$c] != $tempValue[$c]['value']) {
+                            if (!empty($cellMerge[$c])) {
+                                $startPosition = $cellMerge[$c][0];
+                                $endPosition = end($cellMerge[$c]);
+                                $this->mergeCells($startPosition . ':' . $endPosition, $tempValue[$c]['value'], $_mergeColumnStyle);
+                            }
+                            $cellMerge[$c] = [];
+                            $tempValue[$c]['count'] = 1;
+                            $tempValue[$c]['value'] = $temp[$c];
+                            $cellMerge[$c][] = $cell . $_index;
                         }
                     }
-                    $this->data([array_values($temp)]);//二维索引数组
                 }
                 //推送消息
                 $count += count($item);
@@ -185,6 +226,110 @@ class Pxlswrite extends Excel
             }
         }
         return $this;
+    }
+
+    /**
+     * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
+     * @param $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
+     * [
+     *    [
+     *        'order'=>'20200632555' ,
+     *        'time'=>'2020-06-30 12:30:10',
+     *        'username'=>'张三',
+     *        'address'=>'成都',
+     *        'phone'=>'17756891562',
+     *        'item'=> [
+     *            [
+     *                'itemnumer'=>'2020515',
+     *                'productname'=>'商品1',
+     *                'mark'=>'备注',
+     *            ],
+     *        ],
+     *    ]
+     * ];
+     * @param array $_mergeColumn 需要合并的字段
+     * @param array $_mergeColumnStyle 合并单元格样式
+     * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
+     * @param int $_index 单元格行偏移量 合并单元格的起始位置
+     * @return $this
+     * @throws \Exception
+     */
+    public function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
+    {
+        $count = 0;//统计数据处理条数
+        $cellKey = [];//装载需要合并的字段
+        $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
+        foreach ($_mergeColumn as $k => $v) {
+            $key = array_search($v, array_keys($this->fieldsCallback));
+            $cellKey[$v] = self::CELLRANGE[$key];
+        }
+        foreach (call_user_func($_generator) as $item) {
+            foreach ($item as $key => $value) {
+                $i = 0;//标记数组指针位置
+                foreach ($value as $k1 => $v1) {
+                    $i++;
+                    //判断当前值是否是数组
+                    if (!is_array($v1)) {
+                        $orderInfo[$k1] = $v1;//存放order的信息
+                    } else {
+                        //是数组则进行遍历格式化值
+                        $temp = [];//存放处理后的item值
+                        if (!empty($v1)) {
+                            foreach ($v1 as $k2 => $v2) {
+                                $temp[] = $this->filter($v2);
+                            }
+                        } else {
+                            $temp[] = $this->filter([]);
+                        }
+                    }
+                    //遍历到数组最后一个时，进行逐行插入、合并单元格
+                    if (count($value) == $i) {
+                        //处理订单相关字段过滤
+                        $orderTemp = $this->filter($orderInfo);
+                        foreach ($orderTemp as $k4 => $v4) {
+                            if (!key_exists($k4, $orderInfo)) {
+                                unset($orderTemp[$k4]);
+                            }
+                        }
+                        //循环插入订单item  一个order对应多个item
+                        foreach ($temp as $k3 => $v3) {
+                            $_index++;//单元行自增
+                            $data = array_merge($v3, $orderTemp);
+                            $this->data([array_values($data)]);
+                        }
+                        //合并单元格
+                        foreach ($cellKey as $column => $cell) {
+                            $offset = $_index - count($temp) + 1;
+                            $startPosition = $cell . $offset;
+                            $endPosition = $cell . $_index;
+                            $this->mergeCells($startPosition . ':' . $endPosition, $orderTemp[$column], $_mergeColumnStyle);
+                        }
+                    }
+                }
+            }
+            //推送消息
+            $count += count($item);
+            $this->push($_pushHandle, $count);
+        }
+        return $this;
+    }
+
+    /**
+     * 字段过滤&格式化
+     * @param $value 一维数组
+     * @return array 处理之后的结果数组
+     */
+    public function filter($value)
+    {
+        $temp = [];
+        foreach ($this->fieldsCallback as $k => $v) {
+            $temp[$k] = isset($value[$k]) ? $value[$k] : '';
+            //回调字段处理方法
+            if (isset($v['callback'])) {
+                $temp[$k] = call_user_func($v['callback'], $temp[$k], $value);
+            }
+        }
+        return $temp;
     }
 
     /**
@@ -389,6 +534,7 @@ class Pxlswrite extends Excel
         if (!is_resource($formatHandler)) {
             $formatHandler = $this->styleFormat($formatHandler);
         }
+        $this->m_defaultStyle = $formatHandler;
         parent::defaultFormat($formatHandler);
         return $this;
     }
