@@ -1,6 +1,6 @@
 <?php
 /**
- * xlsxwriter简单封装
+ * xlswriter简单封装
  */
 
 namespace Pxlswrite;
@@ -97,7 +97,7 @@ class Pxlswrite extends Excel
 
     /**
      * 创建工作表
-     * @param $_fileName
+     * @param string $_fileName
      * @param string $_tableName
      * @return mixed
      */
@@ -108,9 +108,13 @@ class Pxlswrite extends Excel
 
     /**
      * 设置字段
-     * @param $field
+     * @param array $field 字段定义数组 数据格式如下
+     * [
+     *  'name' => ['name' => '姓名','callback'=>'functionName'],
+     *  'age' => ['name' => '年龄'],
+     * ]
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function field($field)
     {
@@ -125,15 +129,15 @@ class Pxlswrite extends Excel
 
     /**
      * 设置表格头
-     * @param $header
-     * @param null $format_handle
+     * @param array $header
+     * @param resource|null $format_handle
      * @return mixed
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function header($header, $format_handle = NULL)
     {
         if (count($header) !== count($header, 1)) {
-            throw new \Exception('header数据格式错误,必须是一位数索引数组');
+            throw new DataFormatException('header数据格式错误,必须是一位数索引数组');
         }
         $this->header = $header;
         if ($format_handle) {
@@ -157,14 +161,14 @@ class Pxlswrite extends Excel
      * 通过生成器逐行向表格插入数据，
      * 设置过field才支持动态单元格合并，
      * 可以根据指定的字段 通过值比较自动进行 行合并
-     * @param $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
+     * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
      * [['id'=>1,'name'=>'张三','age'=>'18']]
      * @param array $_mergeColumn 需要合并的字段
      * @param array $_mergeColumnStyle 合并单元格的样式
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
-     * @param WebSocketClient $_pushHandle
+     * @param WebSocketClient|null $_pushHandle
      * @return Pxlswrite
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -230,7 +234,7 @@ class Pxlswrite extends Excel
 
     /**
      * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
-     * @param $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
+     * @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
      * [
      *    [
      *        'order'=>'20200632555' ,
@@ -252,7 +256,7 @@ class Pxlswrite extends Excel
      * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -316,7 +320,7 @@ class Pxlswrite extends Excel
 
     /**
      * 字段过滤&格式化
-     * @param $value 一维数组
+     * @param array $value 一维数组
      * @return array 处理之后的结果数组
      */
     public function filter($value)
@@ -333,12 +337,12 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 导入数据
-     * @param $_func string 方法名 回调数据插入的方法
+     * 游标读取excel，分段插入数据库
+     * @param callable $_func 方法名 回调数据插入的方法
      * @param WebSocketClient|null $_pushHandle
      * @param array $_dataType 可指定每个单元格数据类型进行读取
      */
-    public function importData($_func, WebSocketClient $_pushHandle = null, array $_dataType = [])
+    public function importDataByCursor($_func, WebSocketClient $_pushHandle = null, array $_dataType = [])
     {
         $count = 0;
         //游标读取excel数据 每一万条数据执行一次插入数据库 防止数据装载在内存过大
@@ -378,15 +382,15 @@ class Pxlswrite extends Excel
 
     /**
      * 文件下载
-     * @param $_filePath 文件绝对路径
+     * @param string $_filePath 文件绝对路径
      * @param bool $_isDelete 下载后是否删除原文件
-     * @throws \Exception
+     * @throws PathException
      */
     public function download($_filePath, $_isDelete = true)
     {
 //        setcookie("loadingFlag",1);
         if (dirname($_filePath) != $this->m_config['path']) {
-            throw new \Exception('未知文件路径');
+            throw new PathException('未知文件路径:'.dirname($_filePath));
         }
         header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         header('Content-Disposition: attachment;filename="' . end(explode('/', $_filePath)) . '"');
@@ -409,7 +413,7 @@ class Pxlswrite extends Excel
 
     /**
      * 打开文件
-     * @param $zs_file_name 文件名称
+     * @param string $zs_file_name 文件名称
      * @return mixed
      */
     public function openFile($zs_file_name)
@@ -419,7 +423,7 @@ class Pxlswrite extends Excel
 
     /**
      * 读取表格
-     * @param $_fileName
+     * @param string $_fileName
      * @return mixed
      */
     public function import($_fileName)
@@ -431,6 +435,11 @@ class Pxlswrite extends Excel
         return $data;
     }
 
+    /**
+     * 写日志
+     * @param string $_message
+     * @param array $_arr
+     */
     public function writeLog($_message, array $_arr)
     {
         $dir = rtrim($this->m_config['path'], '/') . '/log/';
@@ -445,7 +454,7 @@ class Pxlswrite extends Excel
      * 格式化样式
      * @param array $_style 样式列表数组
      * @return Format resource
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function styleFormat($_style)
     {
@@ -455,7 +464,7 @@ class Pxlswrite extends Excel
             switch ($key) {
                 case 'align':
                     if (!is_array($value) || count($value) != 2) {
-                        throw new \Exception('align 数据格式错误');
+                        throw new DataFormatException('align 数据格式错误');
                     }
                     $format->align($value[0], $value[1]);
                     break;
@@ -474,11 +483,11 @@ class Pxlswrite extends Excel
 
     /**
      * 行单元格样式
-     * @param $range string 单元格范围
-     * @param $height double 单元格高度
-     * @param null $formatHandler resource|array 单元格样式
+     * @param string $range  单元格范围
+     * @param double $height 单元格高度
+     * @param resource|array $formatHandler  单元格样式
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function setRow($range, $height, $formatHandler = null)
     {
@@ -491,11 +500,11 @@ class Pxlswrite extends Excel
 
     /**
      * 列单元格样式
-     * @param $range string 单元格范围
-     * @param $width double 单元格宽度
-     * @param null $formatHandler resource|array 单元格样式
+     * @param string $range 单元格范围
+     * @param double $width 单元格宽度
+     * @param resource|array $formatHandler 单元格样式
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function setColumn($range, $width, $formatHandler = null)
     {
@@ -508,11 +517,11 @@ class Pxlswrite extends Excel
 
     /**
      * 合并单元格
-     * @param $scope  string 单元格范围
-     * @param $data   string data
-     * @param null $formatHandler resource|array style
+     * @param string $scope   单元格范围
+     * @param string $data    data
+     * @param resource|array $formatHandler  合并单元格的样式
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function mergeCells($scope, $data, $formatHandler = null)
     {
@@ -525,9 +534,9 @@ class Pxlswrite extends Excel
 
     /**
      * 全局默认样式
-     * @param $formatHandler resource|array style
+     * @param resource|array $formatHandler style
      * @return $this
-     * @throws \Exception
+     * @throws DataFormatException
      */
     public function defaultFormat($formatHandler)
     {

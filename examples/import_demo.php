@@ -17,7 +17,7 @@ $fileName = end($fileInfo);
 //实例化WebSocketClient
 $pushHandle = new WebSocketClient('ws://192.168.18.192:9502',$_GET['fd']);
 //打开excel文件  setSkipRows(1)跳过一行数据
-$fileObj->openFile($fileName)->openSheet()->setSkipRows(1)->importData('insert_data',$pushHandle);
+$fileObj->openFile($fileName)->openSheet()->setSkipRows(1)->importDataByCursor('insert_data',$pushHandle);
 
 //数据插入逻辑
 function insert_data($data)

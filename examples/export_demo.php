@@ -65,14 +65,14 @@ $orderField =  [
 
 /**
  * 订单数据导出demo
- */
-$filePath = $fileObj
-    ->defaultFormat(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
-    ->field($orderField)//设置字段&表格头
-    ->setOrderData('generateOrderData',['order','time'],[],$pushHandle)
-    ->setColumn('A:B',50)
-    ->setColumn('F:F',50)
-    ->output();//输出excel文件到磁盘
+// */
+//$filePath = $fileObj
+//    ->defaultFormat(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
+//    ->field($orderField)//设置字段&表格头
+//    ->setOrderData('generateOrderData',['order','time'],[],$pushHandle)
+//    ->setColumn('A:B',50)
+//    ->setColumn('F:F',50)
+//    ->output();//输出excel文件到磁盘
 
 //单元格插入文本
 //for ($index = 0; $index < 10; $index++) {
@@ -128,7 +128,7 @@ function generateOrderData(){
         $range = mt_rand(0,5);
         for($k = 0;$k<$range;$k++){
             $orderId = date('YmdHis').rand(1000,9999);
-            $range2 = mt_rand(0,5);
+            $range2 = mt_rand(1,5);
             $item = [];
             for($j = 0;$j<$range2;$j++){
                 $item[] = [
