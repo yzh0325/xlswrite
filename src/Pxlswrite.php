@@ -302,7 +302,7 @@ class Pxlswrite extends Excel
                             $offset = $_index - count($temp) + 1;
                             $startPosition = $cell . $offset;
                             $endPosition = $cell . $_index;
-                            $this->mergeCells($startPosition . ':' . $endPosition, $orderTemp[$column], $_mergeColumnStyle);
+                            $this->mergeCells($startPosition . ':' . $endPosition, $data[$column], $_mergeColumnStyle);
                         }
                     }
                 }
