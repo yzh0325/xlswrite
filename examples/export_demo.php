@@ -20,6 +20,7 @@ $style = [
     'border' => Pxlswrite::BORDER_SLANT_DASH_DOT,//单元格边框
     'background' => Pxlswrite::COLOR_RED,//单元格背景色
     'fontColor' => Pxlswrite::COLOR_BLUE,//字体颜色
+    'underline' => Pxlswrite::UNDERLINE_SINGLE,//下划线
     'fontSize' => 30,//字体大小
     'font' => 'FontName',//设置字体 字体名称，字体必须存在于本机
     'number' => '#,##0',//数字格式化
@@ -65,14 +66,14 @@ $orderField =  [
 
 /**
  * 订单数据导出demo
-// */
-//$filePath = $fileObj
-//    ->defaultFormat(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
-//    ->field($orderField)//设置字段&表格头
-//    ->setOrderData('generateOrderData',['order','time'],[],$pushHandle)
-//    ->setColumn('A:B',50)
-//    ->setColumn('F:F',50)
-//    ->output();//输出excel文件到磁盘
+ */
+$filePath = $fileObj
+    ->defaultFormat(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
+    ->field($orderField)//设置字段&表格头
+    ->setOrderData('generateOrderData',['order','time'],[],$pushHandle)
+    ->setColumn('A:B',50)
+    ->setColumn('F:F',50)
+    ->output();//输出excel文件到磁盘
 
 //单元格插入文本
 //for ($index = 0; $index < 10; $index++) {

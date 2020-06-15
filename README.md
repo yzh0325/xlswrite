@@ -156,6 +156,7 @@ $style = [
     'border' => Pxlswrite::BORDER_SLANT_DASH_DOT,//单元格边框
     'background' => Pxlswrite::COLOR_RED,//单元格背景色
     'fontColor' => Pxlswrite::COLOR_BLUE,//字体颜色
+    'underline' => Pxlswrite::UNDERLINE_SINGLE,//下划线
     'fontSize' => 30,//字体大小
     'font' => 'FontName',//设置字体 字体名称，字体必须存在于本机
     'number' => '#,##0',//数字格式化
