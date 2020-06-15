@@ -55,7 +55,21 @@ function generateData(){
     }
 }
 ```
-
+> 下载excel文件
+>> 函数原型
+```
+/**
+ * 文件下载
+ * @param string $_filePath 文件绝对路径
+ * @param bool $_isDelete 下载后是否删除原文件
+ * @throws PathException
+ */
+download($_filePath, $_isDelete = true)
+```
+>> 示例
+```
+$fileObj->download($filePath); 
+```
 > 使用WebSocket推送excel处理进度
 
 实现过程：前端与websocket服务器先建立连接，连接建立好之后服务端会发送一条消息 {'status' => 'onopen', 'fd' => $request->fd},
@@ -122,7 +136,7 @@ websocket.onerror = function (evt, e) {
         }, 'json');
     }
 ```
->> 3.php 后端调用 WebSocketClient 推送消息
+>> 3. 后端处理excel 并调用 WebSocketClient 推送消息
 ```
 $fileObj = new Pxlswrite(['path' => __DIR__]);
 //实例化WebSocketClient--需要推送进度才实例化
@@ -131,6 +145,8 @@ $filePath = $fileObj->fileName('123.xlsx','sheet1')
     ->field($field)//设置字段&表格头
     ->setDataByGenerator('generateData', [], [], $pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可选参数
     ->output();//输出excel文件到磁盘
+//ajax请求返回下载地址
+echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?file=' . $filePath]);
 ```
 > 样式设置  
 >> 支持的样式如下：
@@ -303,7 +319,7 @@ $fileObj->fileName('1234.xlsx')
 //格式化字段值
 function ageFormat($v, $values)
 {
-    return date(Y) - $values['year'];
+    return date('Y') - $values['year'];
 }
 ```
 
@@ -492,3 +508,4 @@ function insert_data($data)
     $db->execute("insert into sheet2 (id,c1,c2,c3,c4) values " . $sql);
 }
 ```
+更多使用方法见 [xlswrite](https://xlswriter-docs.viest.me/zh-cn)
