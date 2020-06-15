@@ -2,34 +2,55 @@
 这是一个基于xlswriter+yield高性能操作excel的库，集成了websocket用于excel操作时的进度推送。  
 本类继承自xlswriter扩展， 重新封装了一些常用的方法，同时保持基类的用法。  
 xlswriter文档<https://xlswriter-docs.viest.me/>
+# 目录
+* [功能特性](#功能特性)
+* 安装
+	* [installing](#Installing)
+	* [安装xlswrite扩展](#安装xlswriter扩展)
+	* [WebSocket](#WebSocket)
+* [examples](#examples)
+	* excel导出
+		* [导出excel快速上手](#导出excel快速上手)
+		* [下载excel文件](#下载excel文件)
+		* [使用WebSocket推送excel处理进度](#使用WebSocket推送excel处理进度)
+		* [设置字段&表格头](#设置字段&表格头)
+		* [样式设置](#样式设置)
+		* [合并单元格](#合并单元格)
+			* [动态合并单元格](#动态合并单元格)
+				* [通用合并demo](#通用合并demo)
+				* [订单类型合并demo](#订单类型合并demo)
+	* excel读取
+		* [游标读取excel 分段写入数据库](#游标读取excel 分段写入数据库)
 
-功能特性：
+
+## 功能特性
 * 高性能读写百万级别的excel数据
 * 支持动态合并单元格
 * 字段定义和过滤
 * excel处理进度条
 
-# Installing
+## Installing
 ```
 composer require yzh0325/xlswrite
 ```
-# 安装xlswriter扩展 
+## 安装xlswriter扩展 
 * php>=7.0
-* windows环境下 php>=7.2 ,xlswriter版本号大于等于 1.3.4.1
+* windows环境下 php>=7.2 ,xlswriter版本号大于等于 1.3.4.1 [安装帮助](https://xlswriter-docs.viest.me/zh-cn/an-zhuang)
 ```
 pecl install xlswriter
 ```
-# WebSocket 
-* 服务端采用swoole搭建，需要安装swoole扩展 swoole>=4.4.*,需在cli模式下运行
+
+## WebSocket 
+* 服务端采用swoole搭建，需要安装[swoole](https://wiki.swoole.com/#/environment)扩展 swoole>=4.4.*,需在cli模式下运行
 * 客户端采用textalk/websocket的client作为websocket客户端,可在php-fpm模式下运行
 
-# examples
+## examples
 见 examples/ 
 * xlswrite_demo.html 前端demo
 * export_demo.php excel导出demo
 * import_demo.php excel导入demo
 
->简单导出demo：
+### 导出excel快速上手
 ```
 $fileObj = new Pxlswrite(['path' => __DIR__]);
 $filePath = $fileObj
@@ -55,8 +76,8 @@ function generateData(){
     }
 }
 ```
-> 下载excel文件
->> 函数原型
+### 下载excel文件
+函数原型
 ```
 /**
  * 文件下载
@@ -66,24 +87,27 @@ function generateData(){
  */
 download($_filePath, $_isDelete = true)
 ```
->> 示例
+示例
 ```
 $fileObj->download($filePath); 
 ```
-> 使用WebSocket推送excel处理进度
+### 使用WebSocket推送excel处理进度
 
 实现过程：前端与websocket服务器先建立连接，连接建立好之后服务端会发送一条消息 {'status' => 'onopen', 'fd' => $request->fd},
 前端将fd保存起来，在请求处理excel接口时将fd参数传给后台，后台在推送进度消息时将fd参数封装到消息体里在发送给websocket服务器
-，websocket服务器根据fd参数在推送消息给指定的前端，这就完成了处理excel数据的实时进度交互。
+，websocket服务器根据fd参数在推送消息给指定的前端，这就完成了web前端、websocket服务器、应用后端之间的数据交互。
 
-* 前端首次连接时的消息体：['status' => 'onopen', 'fd' => 1]
-* 处理过程中的消息体：['status' => 'processing', 'process' => 100, 'fd'=>1]
+* 前端首次连接时websocket服务器发送的消息体结构：['status' => 'onopen', 'fd' => 1]
+* 处理过程中websocket服务器发送的消息体结构：['status' => 'processing', 'process' => 100, 'fd'=>1]
 
->> 1.开启websocket 服务端 
+前端可根据status状态进行相应的处理，status = onopen 时保存fd,status = processing 时进行进度条渲染。
+
+1.开启websocket 服务端
 ```
 php ./src/WebSocket/WebSocketServer.php
 ```
->> 2.web前端 
+2.web前端实现demo
+
 ```
 var layer = layui.layer, $ = layui.jquery, upload = layui.upload;
 var loading, fileLoading;
@@ -136,7 +160,7 @@ websocket.onerror = function (evt, e) {
         }, 'json');
     }
 ```
->> 3. 后端处理excel 并调用 WebSocketClient 推送消息
+3.后端处理excel 并调用 WebSocketClient 推送消息
 ```
 $fileObj = new Pxlswrite(['path' => __DIR__]);
 //实例化WebSocketClient--需要推送进度才实例化
@@ -148,8 +172,49 @@ $filePath = $fileObj->fileName('123.xlsx','sheet1')
 //ajax请求返回下载地址
 echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?file=' . $filePath]);
 ```
-> 样式设置  
->> 支持的样式如下：
+
+### 设置字段&表格头
+函数原型
+```
+/**
+ * 设置字段&表格头
+ * @param array $field 字段定义数组 数据格式如下
+ * [
+ *  'name' => ['name' => '姓名','callback'=>'functionName'],
+ *  'age' => ['name' => '年龄'],
+ * ]
+ * @return $this
+ * @throws DataFormatException
+ */
+function field($field)
+```
+示例
+```
+//定义字段
+$field = [
+    'name' => ['name' => '姓名'],
+    'year' => ['name' => '出生年份'],
+    'age' => ['name' => '年龄','callback'=>'ageFormat']//callback 回调方法处理格式化值 可以是函数/对象方法
+];
+$fileObj = new Pxlswrite(['path' => __DIR__ ]);
+$fileObj->fileName('1234.xlsx')
+    ->field($field)//设置字段&表格头
+    ->data([
+        ['Rent', 1999,0],
+        ['Gas',  1996,0],
+        ['Food', 1998,0],
+        ['Gym',  1995,0],
+    ])
+    ->output();//输出excel文件到磁盘
+//格式化字段值
+function ageFormat($v, $values)
+{
+    return date('Y') - $values['year'];
+}
+```
+### 样式设置
+
+支持的样式如下：
 ```
 $style = [
     'align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER],//对齐 [x,y]
@@ -166,7 +231,7 @@ $style = [
     'italic' => true,//斜体
 ];
 ```
->> 样式相关常量
+ 样式相关常量
 ```
     const FORMAT_ALIGN_LEFT = Format::FORMAT_ALIGN_LEFT;                                    // 水平左对齐
     const FORMAT_ALIGN_CENTER = Format::FORMAT_ALIGN_CENTER;                                // 水平剧中对齐
@@ -217,7 +282,7 @@ $style = [
     const COLOR_WHITE = Format::COLOR_WHITE;
     const COLOR_YELLOW = Format::COLOR_YELLOW;
 ```
->> 样式设置的相关方法
+ 样式设置的相关方法
 ```
 /**
  * 行单元格样式
@@ -254,7 +319,7 @@ defaultFormat($formatHandler)
  */
 mergeCells($scope, $data, $formatHandler = null)
 ```
->> 示例
+ 示例
 ```
 $fileObj = new Pxlswrite(['path' => __DIR__]);
 $filePath = $fileObj->fileName('123.xlsx','sheet1')
@@ -265,8 +330,9 @@ $filePath = $fileObj->fileName('123.xlsx','sheet1')
     ->output();//输出excel文件到磁盘
 ```
 注意:设置行与行/列与列样式 交集范围会覆盖；行样式优先于列样式；全局默认样式不会被覆盖，谨慎使用
-> 合并单元格
->> 函数原型
+
+### 合并单元格
+ 函数原型
 ```
 /**
  * 合并单元格
@@ -278,53 +344,13 @@ $filePath = $fileObj->fileName('123.xlsx','sheet1')
  */
 mergeCells($scope, $data, $formatHandler = null)
 ```
->> 示例
+ 示例
 ```
 $fileObj->fileName("test.xlsx")
   ->mergeCells('A1:C1', 'Merge cells')
   ->output();
 ```
-> 定义字段&格式化字段
->> 函数原型
-```
-/**
- * 设置字段&表格头
- * @param array $field 字段定义数组 数据格式如下
- * [
- *  'name' => ['name' => '姓名','callback'=>'functionName'],
- *  'age' => ['name' => '年龄'],
- * ]
- * @return $this
- * @throws DataFormatException
- */
-function field($field)
-```
->> 示例
-```
-//定义字段
-$field = [
-    'name' => ['name' => '姓名'],
-    'year' => ['name' => '出生年份'],
-    'age' => ['name' => '年龄','callback'=>'ageFormat']//callback 回调方法处理格式化值 可以是函数/对象方法
-];
-$fileObj = new Pxlswrite(['path' => __DIR__ ]);
-$fileObj->fileName('1234.xlsx')
-    ->field($field)//设置字段&表格头
-    ->data([
-        ['Rent', 1999,0],
-        ['Gas',  1996,0],
-        ['Food', 1998,0],
-        ['Gym',  1995,0],
-    ])
-    ->output();//输出excel文件到磁盘
-//格式化字段值
-function ageFormat($v, $values)
-{
-    return date('Y') - $values['year'];
-}
-```
-
-> 动态合并单元格
+#### 动态合并单元格
 * 通用合并，根据数据的值比较 自动进行 行合并
 
 优点：数据层不需要怎么处理，将数据库查询出来的二维数组直接传入即可。  
@@ -353,8 +379,8 @@ $data = [
 ];
 ```
 字段数量，名称没有限制，只支持一个item(也可以叫其他名字)二维数组，item数组里面的个数没有限制。
->> 通用合并demo
->>> 函数原型
+##### 通用合并demo
+ 函数原型
 ```
  /**
  * 通过生成器逐行向表格插入数据，
@@ -371,7 +397,7 @@ $data = [
  */
 setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1
 ```
->>> 示例
+ 示例
 ```
 //定义字段
 $field = [
@@ -394,9 +420,8 @@ function generateData(){
     }
 }
 ```
-
->> 订单类型合并demo
->>> 函数原型
+##### 订单类型合并demo
+ 函数原型
 ```
 /**
  * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
@@ -425,8 +450,8 @@ function generateData(){
  * @throws DataFormatException
  */
 setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
-``` 
->>> 示例
+```
+ 示例
 ```
 //定义字段
 $orderField =  [
@@ -476,8 +501,8 @@ function generateOrderData(){
 }
 ```
 
-> 游标读取excel 分段写入数据库
->> 函数原型
+### 游标读取excel 分段写入数据库
+ 函数原型
 ```
 /**
  * 游标读取excel，分段插入数据库
@@ -487,7 +512,7 @@ function generateOrderData(){
  */
 importDataByCursor($_func, WebSocketClient $_pushHandle = null, array $_dataType = [])
 ```
->>示例
+示例
 ```
 $fileObj = new Pxlswrite(['path' => dirname($_GET['file'])]);
 $fileInfo = explode('/', $_GET['file']);
