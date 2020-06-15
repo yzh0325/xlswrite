@@ -20,7 +20,7 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 				* [通用合并demo](#通用合并demo)
 				* [订单类型合并demo](#订单类型合并demo)
 	* excel读取
-		* [游标读取excel 分段写入数据库](#游标读取excel 分段写入数据库)
+		* [游标读取excel分段写入数据库](#游标读取excel分段写入数据库)
 
 
 ## 功能特性
@@ -501,7 +501,7 @@ function generateOrderData(){
 }
 ```
 
-### 游标读取excel 分段写入数据库
+### 游标读取excel分段写入数据库
  函数原型
 ```
 /**
