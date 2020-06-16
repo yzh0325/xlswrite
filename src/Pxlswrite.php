@@ -69,11 +69,12 @@ class Pxlswrite extends Excel
      * [$fieldsCallback 设置字段回调函数]
      * @var array
      */
-    public $fieldsCallback = [];
+    public $m_fieldsCallback = [];
     /**
+     * 表格头
      * @var array
      */
-    public $header = [];
+    public $m_header = [];
     /**
      * 单元格字段范围
      */
@@ -96,7 +97,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 创建工作表
+     * @todo 创建工作表
      * @param string $_fileName
      * @param string $_tableName
      * @return mixed
@@ -107,8 +108,8 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 设置字段
-     * @param array $field 字段定义数组 数据格式如下
+     * @todo 设置字段
+     * @param array $_field 字段定义数组 数据格式如下
      * [
      *  'name' => ['name' => '姓名','callback'=>'functionName'],
      *  'age' => ['name' => '年龄'],
@@ -116,39 +117,39 @@ class Pxlswrite extends Excel
      * @return $this
      * @throws DataFormatException
      */
-    public function field($field)
+    public function field($_field)
     {
-        if (!empty($field)) {
-            $this->fieldsCallback = array_merge($this->fieldsCallback, $field);
+        if (!empty($_field)) {
+            $this->m_fieldsCallback = array_merge($this->m_fieldsCallback, $_field);
         }
-        if (empty($this->header)) {
-            $this->header(array_column($field, 'name'));
+        if (empty($this->m_header)) {
+            $this->header(array_column($_field, 'name'));
         }
         return $this;
     }
 
     /**
-     * 设置表格头
-     * @param array $header
-     * @param resource|null $format_handle
+     * @todo 设置表格头
+     * @param array $_header
+     * @param resource|null $_formatHandle
      * @return mixed
      * @throws DataFormatException
      */
-    public function header($header, $format_handle = NULL)
+    public function header($_header, $_formatHandle = NULL)
     {
-        if (count($header) !== count($header, 1)) {
+        if (count($_header) !== count($_header, 1)) {
             throw new DataFormatException('header数据格式错误,必须是一位数索引数组');
         }
-        $this->header = $header;
-        if ($format_handle) {
-            return parent::header($header, $format_handle);
+        $this->m_header = $_header;
+        if ($_formatHandle) {
+            return parent::header($_header, $_formatHandle);
         } else {
-            return parent::header($header);
+            return parent::header($_header);
         }
     }
 
     /**
-     * 设置表格数据
+     * @todo 设置表格数据
      * @param array $_data 二维索引数组
      * @return
      */
@@ -158,7 +159,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 通过生成器逐行向表格插入数据，
+     * @todo 通过生成器逐行向表格插入数据，
      * 设置过field才支持动态单元格合并，
      * 可以根据指定的字段 通过值比较自动进行 行合并
      * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
@@ -169,6 +170,7 @@ class Pxlswrite extends Excel
      * @param WebSocketClient|null $_pushHandle
      * @return Pxlswrite
      * @throws DataFormatException
+     * @throws CellOutOfRangeException
      */
     public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -176,8 +178,8 @@ class Pxlswrite extends Excel
         $cellKey = [];//装载需要合并的字段
         $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
-            $key = array_search($v, array_keys($this->fieldsCallback));
-            $cellKey[$v] = self::CELLRANGE[$key];
+            $key = array_search($v, array_keys($this->m_fieldsCallback));
+            $cellKey[$v] = $this->getColumnIndex($key);
             //临时存放需要合并的值
             $tempValue[$v] = [
                 'count' => 0,
@@ -185,7 +187,7 @@ class Pxlswrite extends Excel
             ];
         }
         //判断是否有定义字段 有则进行字段格式化&字段过滤
-        if (!empty($this->fieldsCallback)) {
+        if (!empty($this->m_fieldsCallback)) {
             foreach (call_user_func($_generator) as $item) {
                 foreach ($item as $value) {
                     $_index++;//单元行自增
@@ -233,7 +235,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
+     * @todo 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
      * @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
      * [
      *    [
@@ -257,6 +259,7 @@ class Pxlswrite extends Excel
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @return $this
      * @throws DataFormatException
+     * @throws CellOutOfRangeException
      */
     public function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -264,8 +267,8 @@ class Pxlswrite extends Excel
         $cellKey = [];//装载需要合并的字段
         $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
-            $key = array_search($v, array_keys($this->fieldsCallback));
-            $cellKey[$v] = self::CELLRANGE[$key];
+            $key = array_search($v, array_keys($this->m_fieldsCallback));
+            $cellKey[$v] = $this->getColumnIndex($key);
         }
         foreach (call_user_func($_generator) as $item) {
             foreach ($item as $key => $value) {
@@ -319,25 +322,45 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 字段过滤&格式化
-     * @param array $value 一维数组
+     * @todo 获取字段所在列 A-ZZ
+     * @param $_index
+     * @return mixed|string
+     * @throws CellOutOfRangeException
+     */
+    public function getColumnIndex($_index)
+    {
+        if ($_index < 0 || $_index > (26 * 26)) {
+            throw new CellOutOfRangeException('字段列超出范围（A-ZZ）');
+        }
+        if ($_index < 26) {
+            return self::CELLRANGE[$_index];
+        } else {
+            $a = intdiv($_index, 26);
+            $b = $_index % 26;
+            return self::CELLRANGE[$a - 1] . self::CELLRANGE[$b];
+        }
+    }
+
+    /**
+     * @todo 字段过滤&格式化
+     * @param array $_value 一维数组
      * @return array 处理之后的结果数组
      */
-    public function filter($value)
+    public function filter($_value)
     {
         $temp = [];
-        foreach ($this->fieldsCallback as $k => $v) {
-            $temp[$k] = isset($value[$k]) ? $value[$k] : '';
+        foreach ($this->m_fieldsCallback as $k => $v) {
+            $temp[$k] = isset($_value[$k]) ? $_value[$k] : '';
             //回调字段处理方法
             if (isset($v['callback'])) {
-                $temp[$k] = call_user_func($v['callback'], $temp[$k], $value);
+                $temp[$k] = call_user_func($v['callback'], $temp[$k], $_value);
             }
         }
         return $temp;
     }
 
     /**
-     * 游标读取excel，分段插入数据库
+     * @todo 游标读取excel，分段插入数据库
      * @param callable $_func 方法名 回调数据插入的方法
      * @param WebSocketClient|null $_pushHandle
      * @param array $_dataType 可指定每个单元格数据类型进行读取
@@ -364,15 +387,15 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 消息推送
+     * @todo 消息推送
      * @param $_pushHandle
-     * @param $count
+     * @param $_count
      */
-    public function push($_pushHandle, $count)
+    public function push($_pushHandle, $_count)
     {
         try {
             if ($_pushHandle && $_pushHandle->m_receiverFd) {
-                $_pushHandle->send(['status' => 'processing', 'process' => $count]);
+                $_pushHandle->send(['status' => 'processing', 'process' => $_count]);
             }
         } catch (\Exception $exception) {
             $this->writeLog($exception->getMessage(), [$exception->getTraceAsString()]);
@@ -381,16 +404,15 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 文件下载
+     * @todo 文件下载
      * @param string $_filePath 文件绝对路径
      * @param bool $_isDelete 下载后是否删除原文件
      * @throws PathException
      */
     public function download($_filePath, $_isDelete = true)
     {
-//        setcookie("loadingFlag",1);
         if (dirname($_filePath) != $this->m_config['path']) {
-            throw new PathException('未知文件路径:'.dirname($_filePath));
+            throw new PathException('未知文件路径:' . dirname($_filePath));
         }
         header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         header('Content-Disposition: attachment;filename="' . end(explode('/', $_filePath)) . '"');
@@ -402,7 +424,7 @@ class Pxlswrite extends Excel
 
         ob_clean();
         flush();
-        // echo file_get_contents($filePath);
+
         if (copy($_filePath, 'php://output') === false) {
             // Throw exception
         }
@@ -412,17 +434,17 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 打开文件
-     * @param string $zs_file_name 文件名称
+     * @todo 打开文件
+     * @param string $_fileName 文件名称
      * @return mixed
      */
-    public function openFile($zs_file_name)
+    public function openFile($_fileName)
     {
-        return parent::openFile($zs_file_name);
+        return parent::openFile($_fileName);
     }
 
     /**
-     * 读取表格
+     * @todo 读取表格
      * @param string $_fileName
      * @return mixed
      */
@@ -436,7 +458,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 写日志
+     * @todo 写日志
      * @param string $_message
      * @param array $_arr
      */
@@ -451,7 +473,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 格式化样式
+     * @todo 格式化样式
      * @param array $_style 样式列表数组
      * @return Format resource
      * @throws DataFormatException
@@ -482,69 +504,69 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * 行单元格样式
-     * @param string $range  单元格范围
-     * @param double $height 单元格高度
-     * @param resource|array $formatHandler  单元格样式
+     * @todo 行单元格样式
+     * @param string $_range 单元格范围
+     * @param double $_height 单元格高度
+     * @param resource|array $_formatHandler 单元格样式
      * @return $this
      * @throws DataFormatException
      */
-    public function setRow($range, $height, $formatHandler = null)
+    public function setRow($_range, $_height, $_formatHandler = null)
     {
-        if (!is_resource($formatHandler)) {
-            $formatHandler = $this->styleFormat($formatHandler);
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        parent::setRow($range, $height, $formatHandler);
+        parent::setRow($_range, $_height, $_formatHandler);
         return $this;
     }
 
     /**
-     * 列单元格样式
-     * @param string $range 单元格范围
-     * @param double $width 单元格宽度
-     * @param resource|array $formatHandler 单元格样式
+     * @todo 列单元格样式
+     * @param string $_range 单元格范围
+     * @param double $_width 单元格宽度
+     * @param resource|array $_formatHandler 单元格样式
      * @return $this
      * @throws DataFormatException
      */
-    public function setColumn($range, $width, $formatHandler = null)
+    public function setColumn($_range, $_width, $_formatHandler = null)
     {
-        if (!is_resource($formatHandler)) {
-            $formatHandler = $this->styleFormat($formatHandler);
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        parent::setColumn($range, $width, $formatHandler);
+        parent::setColumn($_range, $_width, $_formatHandler);
         return $this;
     }
 
     /**
-     * 合并单元格
-     * @param string $scope   单元格范围
-     * @param string $data    data
-     * @param resource|array $formatHandler  合并单元格的样式
+     * @todo 合并单元格
+     * @param string $_scope 单元格范围
+     * @param string $_data data
+     * @param resource|array $_formatHandler 合并单元格的样式
      * @return $this
      * @throws DataFormatException
      */
-    public function mergeCells($scope, $data, $formatHandler = null)
+    public function mergeCells($_scope, $_data, $_formatHandler = null)
     {
-        if (!is_resource($formatHandler)) {
-            $formatHandler = $this->styleFormat($formatHandler);
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        parent::mergeCells($scope, $data, $formatHandler);
+        parent::mergeCells($_scope, $_data, $_formatHandler);
         return $this;
     }
 
     /**
-     * 全局默认样式
-     * @param resource|array $formatHandler style
+     * @todo 全局默认样式
+     * @param resource|array $_formatHandler style
      * @return $this
      * @throws DataFormatException
      */
-    public function defaultFormat($formatHandler)
+    public function defaultFormat($_formatHandler)
     {
-        if (!is_resource($formatHandler)) {
-            $formatHandler = $this->styleFormat($formatHandler);
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        $this->m_defaultStyle = $formatHandler;
-        parent::defaultFormat($formatHandler);
+        $this->m_defaultStyle = $_formatHandler;
+        parent::defaultFormat($_formatHandler);
         return $this;
     }
 }
