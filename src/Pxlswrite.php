@@ -169,8 +169,8 @@ class Pxlswrite extends Excel
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @param WebSocketClient|null $_pushHandle
      * @return Pxlswrite
-     * @throws DataFormatException
-     * @throws CellOutOfRangeException
+     * @throws DataFormatException 数据格式错误
+     * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
      */
     public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -258,8 +258,8 @@ class Pxlswrite extends Excel
      * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @return $this
-     * @throws DataFormatException
-     * @throws CellOutOfRangeException
+     * @throws DataFormatException 数据格式错误
+     * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
      */
     public function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {

@@ -202,7 +202,7 @@ echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?
 
 ### 设置字段&表格头
 通过field()可以进行字段的定义&表格头的设置，使用header()定义的表格头会覆盖field()定义的表格头；  
-使用field()定义字段后在使用setDataByGenerator()和setOrderData()时会进行字段的过滤，设置了回调的方法还会调用字段的回调方法，进行字段的格式化处理等操作。**但并不推荐设置字段的回调，因为效率不高，可以在传入数据的时候就处理好字段的值**。**推荐使field()设置表格头。**
+使用field()定义字段后在使用setDataByGenerator()和setOrderData()时会进行字段的过滤，设置了回调的方法还会调用字段的回调方法，进行字段的格式化处理等操作。**但并不推荐设置字段的回调，因为效率不高，可以在传入数据的时候就处理好字段的值**。**推荐使field()设置表格头,设置过field才支持动态单元格行合并。**
 
 函数原型
 ```
@@ -415,8 +415,8 @@ $data = [
 ##### 通用合并demo
  函数原型
 ```
- /**
- * 通过生成器逐行向表格插入数据，
+/**
+ * @todo 通过生成器逐行向表格插入数据，
  * 设置过field才支持动态单元格合并，
  * 可以根据指定的字段 通过值比较自动进行 行合并
  * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
@@ -424,9 +424,10 @@ $data = [
  * @param array $_mergeColumn 需要合并的字段
  * @param array $_mergeColumnStyle 合并单元格的样式
  * @param int $_index 单元格行偏移量 合并单元格的起始位置
- * @param WebSocketClient|null $_pushHandle 用于推送的WebSocketClient
+ * @param WebSocketClient|null $_pushHandle
  * @return Pxlswrite
- * @throws DataFormatException
+ * @throws DataFormatException 数据格式错误
+ * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
  */
 setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
@@ -481,7 +482,8 @@ function generateData(){
  * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
  * @param int $_index 单元格行偏移量 合并单元格的起始位置
  * @return $this
- * @throws DataFormatException
+ * @throws DataFormatException 数据格式错误
+ * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
  */
 setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
