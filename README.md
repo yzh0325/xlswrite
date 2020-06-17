@@ -1,5 +1,5 @@
 # xlswriter+yield+websocket
-这是一个基于xlswriter+yield高性能操作excel的库，集成了websocket用于excel操作时的进度推送。  
+这是一个基于xlswriter+yield高性能操作excel/csv的库，集成了websocket用于excel操作时的进度推送。  
 本类继承自xlswriter扩展， 重新封装了一些常用的方法，同时保持基类的用法。  
 xlswriter文档<https://xlswriter-docs.viest.me/>
 # 目录
@@ -9,7 +9,7 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 	* [安装xlswrite扩展](#安装xlswriter扩展)
 	* [WebSocket](#WebSocket)
 * [examples](#examples)
-	* excel导出
+	* [excel导出](#excel导出)
 		* [导出excel快速上手](#导出excel快速上手)
 		* [下载excel文件](#下载excel文件)
 		* [使用WebSocket推送excel处理进度](#使用WebSocket推送excel处理进度)
@@ -19,7 +19,7 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 			* [动态合并单元格](#动态合并单元格)
 				* [通用合并demo](#通用合并demo)
 				* [订单类型合并demo](#订单类型合并demo)
-	* excel读取
+	* [excel读取](#excel读取)
 		* [游标读取excel分段写入数据库](#游标读取excel分段写入数据库)
 
 
@@ -28,6 +28,8 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 * 支持动态合并单元格
 * 字段定义和过滤
 * excel处理进度条
+* 支持 Excel 2007+ xlsx 文件
+* 支持csv文件读写
 
 ## Installing
 ```
@@ -50,6 +52,8 @@ pecl install xlswriter
 * export_demo.php excel导出demo
 * import_demo.php excel导入demo
 
+## excel导出
+可根据创建的文件名后缀自动导出xlsx文件和csv文件
 ### 导出excel快速上手
 ```
 use Pxlswrite\Pxlswrite;
@@ -537,7 +541,8 @@ function generateOrderData(){
     }
 }
 ```
-
+## excel读取
+可读取xlsx文件和csv文件
 ### 游标读取excel分段写入数据库
  函数原型
 ```
