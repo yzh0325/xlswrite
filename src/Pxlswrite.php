@@ -76,10 +76,6 @@ class Pxlswrite extends Excel
      */
     public $m_header = [];
     /**
-     * 单元格字段范围
-     */
-    const CELLRANGE = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
-    /**
      * @var resource 默认样式
      */
     public $m_defaultStyle;
@@ -170,7 +166,6 @@ class Pxlswrite extends Excel
      * @param WebSocketClient|null $_pushHandle
      * @return Pxlswrite
      * @throws DataFormatException 数据格式错误
-     * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
      */
     public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -179,7 +174,7 @@ class Pxlswrite extends Excel
         $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
             $key = array_search($v, array_keys($this->m_fieldsCallback));
-            $cellKey[$v] = $this->getColumnIndex($key);
+            $cellKey[$v] = self::stringFromColumnIndex($key);
             //临时存放需要合并的值
             $tempValue[$v] = [
                 'count' => 0,
@@ -259,7 +254,6 @@ class Pxlswrite extends Excel
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @return $this
      * @throws DataFormatException 数据格式错误
-     * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
      */
     public function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
@@ -268,7 +262,7 @@ class Pxlswrite extends Excel
         $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
             $key = array_search($v, array_keys($this->m_fieldsCallback));
-            $cellKey[$v] = $this->getColumnIndex($key);
+            $cellKey[$v] = self::stringFromColumnIndex($key);
         }
         foreach (call_user_func($_generator) as $item) {
             foreach ($item as $key => $value) {
@@ -321,25 +315,6 @@ class Pxlswrite extends Excel
         return $this;
     }
 
-    /**
-     * @todo 获取字段所在列 A-ZZ
-     * @param $_index
-     * @return mixed|string
-     * @throws CellOutOfRangeException
-     */
-    public function getColumnIndex($_index)
-    {
-        if ($_index < 0 || $_index > (26 * 26)) {
-            throw new CellOutOfRangeException('字段列超出范围（A-ZZ）');
-        }
-        if ($_index < 26) {
-            return self::CELLRANGE[$_index];
-        } else {
-            $a = intdiv($_index, 26);
-            $b = $_index % 26;
-            return self::CELLRANGE[$a - 1] . self::CELLRANGE[$b];
-        }
-    }
 
     /**
      * @todo 字段过滤&格式化
@@ -568,5 +543,34 @@ class Pxlswrite extends Excel
         $this->m_defaultStyle = $_formatHandler;
         parent::defaultFormat($_formatHandler);
         return $this;
+    }
+
+    /**
+     *	String from columnindex
+     *
+     *	@param	int $_columnIndex Column index (base 0 !!!)
+     *	@return	string
+     */
+    public static function stringFromColumnIndex($_columnIndex = 0)
+    {
+        //	Using a lookup cache adds a slight memory overhead, but boosts speed
+        //	caching using a static within the method is faster than a class static,
+        //		though it's additional memory overhead
+        static $s_indexCache = array();
+
+        if (!isset($s_indexCache[$_columnIndex])) {
+            // Determine column string
+            if ($_columnIndex < 26) {
+                $s_indexCache[$_columnIndex] = chr(65 + $_columnIndex);
+            } elseif ($_columnIndex < 702) {
+                $s_indexCache[$_columnIndex] = chr(64 + ($_columnIndex / 26)) .
+                    chr(65 + $_columnIndex % 26);
+            } else {
+                $s_indexCache[$_columnIndex] = chr(64 + (($_columnIndex - 26) / 676)) .
+                    chr(65 + ((($_columnIndex - 26) % 676) / 26)) .
+                    chr(65 + $_columnIndex % 26);
+            }
+        }
+        return $s_indexCache[$_columnIndex];
     }
 }

@@ -431,7 +431,6 @@ $data = [
  * @param WebSocketClient|null $_pushHandle
  * @return Pxlswrite
  * @throws DataFormatException 数据格式错误
- * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
  */
 setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
@@ -487,7 +486,6 @@ function generateData(){
  * @param int $_index 单元格行偏移量 合并单元格的起始位置
  * @return $this
  * @throws DataFormatException 数据格式错误
- * @throws CellOutOfRangeException 超出单元列的范围(A-ZZ)
  */
 setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
