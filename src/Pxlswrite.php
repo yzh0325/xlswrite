@@ -76,9 +76,9 @@ class Pxlswrite extends Excel
      */
     public $m_header = [];
     /**
-     * @var resource 默认样式
+     * @var array 默认样式
      */
-    public $m_defaultStyle;
+    public $m_defaultStyle = [];
 
     /**
      * Pxlswrite constructor.
@@ -127,21 +127,21 @@ class Pxlswrite extends Excel
     /**
      * @todo 设置表格头
      * @param array $_header
-     * @param resource|null $_formatHandle
+     * @param null $_formatHandler
      * @return mixed
      * @throws DataFormatException
      */
-    public function header($_header, $_formatHandle = NULL)
+    public function header($_header, $_formatHandler = NULL)
     {
         if (count($_header) !== count($_header, 1)) {
             throw new DataFormatException('header数据格式错误,必须是一位数索引数组');
         }
         $this->m_header = $_header;
-        if ($_formatHandle) {
-            return parent::header($_header, $_formatHandle);
-        } else {
-            return parent::header($_header);
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
         }
+        parent::header($_header, $_formatHandler);
+        return $this;
     }
 
     /**
@@ -171,7 +171,6 @@ class Pxlswrite extends Excel
     {
         $count = 0;//统计数据处理条数
         $cellKey = [];//装载需要合并的字段
-        $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
             $key = array_search($v, array_keys($this->m_fieldsCallback));
             $cellKey[$v] = self::stringFromColumnIndex($key);
@@ -259,7 +258,6 @@ class Pxlswrite extends Excel
     {
         $count = 0;//统计数据处理条数
         $cellKey = [];//装载需要合并的字段
-        $_mergeColumnStyle = !empty($_mergeColumnStyle) ? $_mergeColumnStyle : $this->m_defaultStyle;
         foreach ($_mergeColumn as $k => $v) {
             $key = array_search($v, array_keys($this->m_fieldsCallback));
             $cellKey[$v] = self::stringFromColumnIndex($key);
@@ -457,6 +455,8 @@ class Pxlswrite extends Excel
     {
         $format = new Format($this->getHandle());
         $_style = empty($_style) ? [] : $_style;
+        //合并全局样式
+        $_style = array_merge($this->m_defaultStyle,$_style);
         foreach ($_style as $key => $value) {
             switch ($key) {
                 case 'align':
@@ -538,9 +538,10 @@ class Pxlswrite extends Excel
     public function defaultFormat($_formatHandler)
     {
         if (!is_resource($_formatHandler)) {
+            $this->m_defaultStyle = $_formatHandler;
             $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        $this->m_defaultStyle = $_formatHandler;
+
         parent::defaultFormat($_formatHandler);
         return $this;
     }
@@ -572,5 +573,41 @@ class Pxlswrite extends Excel
             }
         }
         return $s_indexCache[$_columnIndex];
+    }
+
+    /**
+     * @param int $_row 行 从0开始
+     * @param int $_col 列 从0开始
+     * @param string $_data 数据
+     * @param string $_format 数据格式
+     * @param array $_formatHandler 单元格样式
+     * @return $this
+     * @throws DataFormatException
+     */
+    public function insertText($_row, $_col, $_data, $_format = '', $_formatHandler=[])
+    {
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
+        }
+        parent::insertText($_row,$_col,$_data,$_format,$_formatHandler);
+        return $this;
+    }
+
+    /**
+     * 插入链接
+     * @param int $_row 行 从0开始
+     * @param int $_col 列 从0开始
+     * @param string $_url  链接地址
+     * @param array $_formatHandler 单元格样式
+     * @return $this
+     * @throws DataFormatException
+     */
+    public function insertUrl($_row,$_col,$_url, $_formatHandler = [])
+    {
+        if (!is_resource($_formatHandler)) {
+            $_formatHandler = $this->styleFormat($_formatHandler);
+        }
+        parent::insertUrl($_row, $_col, $_url, $_formatHandler);
+        return $this;
     }
 }
