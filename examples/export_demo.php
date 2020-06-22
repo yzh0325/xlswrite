@@ -55,7 +55,7 @@ $orderField =  [
  * 一般数据导出demo
  */
 //$filePath = $fileObj->field($field)//设置字段&表格头
-//    ->setDataByGenerator('generateData', ['c1', 'c2'], ['align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]], $pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可不传
+//    ->setGeneralData('generateData', ['c1', 'c2'], ['align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]], $pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可不传
 //    ->setRow('A1:A3', 80, $style)//设置范围行样式 80行高
 //    ->setColumn('A:F', 20, ['background' => Pxlswrite::COLOR_GRAY, 'align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//设置范围列样式 20列宽
 //    ->setRow('A1', 50, ['background' => Pxlswrite::COLOR_PINK, 'align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//设置指定某一行样式

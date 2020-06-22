@@ -19,6 +19,7 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 			* [动态合并单元格](#动态合并单元格)
 				* [通用合并demo](#通用合并demo)
 				* [订单类型合并demo](#订单类型合并demo)
+		* [单元格数据填充相关的方法](#单元格数据填充相关的方法)
 	* [excel读取](#excel读取)
 		* [游标读取excel分段写入数据库](#游标读取excel分段写入数据库)
 
@@ -64,7 +65,7 @@ $filePath = $fileObj
         'username'=>['name'=>'用户名'],
         'age'=>['name'=>'年龄']
     ]) //设置字段&表格头
-    ->setDataByGenerator('generateData') //通过回调生成器方法向excel填充数据
+    ->setGeneralData('generateData') //通过回调生成器方法向excel填充数据
     ->output(); //输出excel文件到磁盘，返回文件路径
 $fileObj->download($filePath); //下载excel文件
 /**
@@ -125,7 +126,7 @@ $pushHandle->send(['status' => 'rocessing', 'process' => 100, 'fd'=>1]);
 处理excel时自动发送消息（在推送信息失败时不会影响、终止代码的执行，会生成相应的日志文件，日志文件存放于实例化Pxlswrite所设置的路径下的log目录，日志文件按日期存放）
 ```
 //通用数据设置 generateData回调生成器方法获取数据，$pushHandle 用于推送，可选参数
-setDataByGenerator('generateData', [], [], $pushHandle)
+setGeneralData('generateData', [], [], $pushHandle)
 //订单类型数据设置 generateOrderData回调生成器方法获取数据，$pushHandle 用于推送，可选参数
 setOrderData('generateOrderData',[],[],pushHandle)
 ```
@@ -198,7 +199,7 @@ $fileObj = new Pxlswrite(['path' => __DIR__]);
 $pushHandle = new WebSocketClient('ws://127.0.0.1:9502', $_GET['fd']);
 $filePath = $fileObj->fileName('123.xlsx','sheet1')
     ->field($field)//设置字段&表格头
-    ->setDataByGenerator('generateData', [], [], $pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可选参数
+    ->setGeneralData('generateData', [], [], $pushHandle)//设置数据 回调生成器方法获取数据，$pushHandle 用于推送，可选参数
     ->output();//输出excel文件到磁盘
 //ajax请求返回下载地址
 echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?file=' . $filePath]);
@@ -206,7 +207,7 @@ echo json_encode(['code' => 1, 'msg' => '导出完毕', 'url' => '/download.php?
 
 ### 设置字段&表格头
 通过field()可以进行字段的定义&表格头的设置，使用header()定义的表格头会覆盖field()定义的表格头；  
-使用field()定义字段后在使用setDataByGenerator()和setOrderData()时会进行字段的过滤，设置了回调的方法还会调用字段的回调方法，进行字段的格式化处理等操作。**但并不推荐设置字段的回调，因为效率不高，可以在传入数据的时候就处理好字段的值**。**推荐使field()设置表格头,设置过field才支持动态单元格行合并。**
+使用field()定义字段后在使用setGeneralData()和setOrderData()时会进行字段的过滤，设置了回调的方法还会调用字段的回调方法，进行字段的格式化处理等操作。**但并不推荐设置字段的回调，因为效率不高，可以在传入数据的时候就处理好字段的值**。**推荐使field()设置表格头,设置过field才支持动态单元格行合并。**
 
 函数原型
 ```
@@ -360,7 +361,7 @@ use Pxlswrite\Pxlswrite;
 $fileObj = new Pxlswrite(['path' => __DIR__]);
 $filePath = $fileObj->fileName('123.xlsx','sheet1')
     ->field($field)//设置字段&表格头
-    ->setDataByGenerator('generateData')//设置数据
+    ->setGeneralData('generateData')//设置数据
     ->setRow('A1:A3', 80, ['bold'=>true]) //设置单元行样式 A1:A3 单元格范围 80行高 ['blod'=>true] 加粗
     ->setColumn('A:F', 20, ['background' => Pxlswrite::COLOR_GRAY, 'align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]]) //设置单元列样式
     ->output();//输出excel文件到磁盘
@@ -432,7 +433,7 @@ $data = [
  * @return Pxlswrite
  * @throws DataFormatException 数据格式错误
  */
-setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
+setGeneralData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
  示例
 ```
@@ -447,7 +448,7 @@ $field = [
 $fileObj = new Pxlswrite(['path' => __DIR__ ]);
 $filePath = $fileObj->fileName('123.xlsx');
     ->field($field)//设置字段&表格头
-    ->setDataByGenerator('generateData', ['c1', 'c2'], ['align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//设置数据 并自动合并单元格
+    ->setGeneralData('generateData', ['c1', 'c2'], ['align' => [Pxlswrite::FORMAT_ALIGN_CENTER, Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//设置数据 并自动合并单元格
     ->output();//输出excel文件到磁盘
 //数据生成器
 function generateData(){
@@ -539,6 +540,75 @@ function generateOrderData(){
     }
 }
 ```
+## 单元格数据填充相关的方法
+使用生成器，逐行插入数据（一般通用数据）
+```
+/**
+* @todo 设置一般数据 通过生成器逐行向表格插入数据，
+* 设置过field才支持动态单元格合并，
+* 可以根据指定的字段 通过值比较自动进行 行合并
+* @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
+* [['id'=>1,'name'=>'张三','age'=>'18']]
+* @param array $_mergeColumn 需要合并的字段
+* @param array $_mergeColumnStyle 合并单元格的样式
+* @param int $_index 单元格行偏移量 合并单元格的起始位置
+* @param WebSocketClient|null $_pushHandle
+* @return Pxlswrite
+* @throws DataFormatException 数据格式错误
+*/
+function setGeneralData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
+```
+使用生成器，逐行插入数据（订单类型数据）
+```
+/**
+* @todo 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
+* @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
+* [
+*    [
+*        'order'=>'20200632555' ,
+*        'time'=>'2020-06-30 12:30:10',
+*        'username'=>'张三',
+*        'address'=>'成都',
+*        'phone'=>'17756891562',
+*        'item'=> [
+*            [
+*                'itemnumer'=>'2020515',
+*                'productname'=>'商品1',
+*                'mark'=>'备注',
+*            ],
+*        ],
+*    ]
+* ];
+* @param array $_mergeColumn 需要合并的字段
+* @param array $_mergeColumnStyle 合并单元格样式
+* @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
+* @param int $_index 单元格行偏移量 合并单元格的起始位置
+* @return $this
+* @throws DataFormatException 数据格式错误
+*/
+function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
+```
+逐行逐列插入数据，按单元格循环插入(可以区分文本插入和超链接插入，这种方式插入的数据，后面无法通过批量设置样式)
+```
+/**
+* 设置数据，逐行逐列插入数据，可以区分分本插入和超链接插入
+* @param $_data
+* @param int $_rowIndex 单元行索引(起始位置为0)
+* @param int $_coleIndex 单元列索引(起始位置为0)
+* @throws DataFormatException
+*/
+function setData($_data,$_rowIndex = 1,$_coleIndex = 0)
+```
+批量插入数据（setGeneralData和setOrderData都是基于它来实现的）
+```
+/**
+* @todo 设置表格数据
+* @param array $_data 二维索引数组
+* @return
+*/
+function data($_data)
+```
+更多使用方法见[xlswriter](https://xlswriter-docs.viest.me/zh-cn/dan-yuan-ge)
 ## excel读取
 可读取xlsx文件和csv文件
 ### 游标读取excel分段写入数据库

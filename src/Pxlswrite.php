@@ -79,7 +79,16 @@ class Pxlswrite extends Excel
      * @var array 默认样式
      */
     public $m_defaultStyle = [];
-
+    /**
+     * excel 行索引
+     * @var int
+     */
+    public static $s_rowIndex = 1;
+    /**
+     * excel 列索引
+     * @var int
+     */
+    public static $s_colIndex = 0;
     /**
      * Pxlswrite constructor.
      * @param array $_config
@@ -155,7 +164,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 通过生成器逐行向表格插入数据，
+     * @todo 设置一般数据 通过生成器逐行向表格插入数据，
      * 设置过field才支持动态单元格合并，
      * 可以根据指定的字段 通过值比较自动进行 行合并
      * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
@@ -167,7 +176,7 @@ class Pxlswrite extends Excel
      * @return Pxlswrite
      * @throws DataFormatException 数据格式错误
      */
-    public function setDataByGenerator($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
+    public function setGeneralData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
     {
         $count = 0;//统计数据处理条数
         $cellKey = [];//装载需要合并的字段
@@ -609,5 +618,34 @@ class Pxlswrite extends Excel
         }
         parent::insertUrl($_row, $_col, $_url, $_formatHandler);
         return $this;
+    }
+
+    /**
+     * 设置数据，逐行逐列插入数据，可以区分文本插入和超链接插入
+     * @param $_data
+     * @param int $_rowIndex 单元行索引(起始位置为0)
+     * @param int $_coleIndex 单元列索引(起始位置为0)
+     * @throws DataFormatException
+     */
+    public function setData($_data,$_rowIndex = 1,$_coleIndex = 0)
+    {
+        if($_rowIndex != 1){
+            self::$s_rowIndex = $_rowIndex;
+        }
+        if($_coleIndex !== 0){
+            self::$s_colIndex = $_coleIndex;
+        }
+        foreach($_data as $item){
+            self::$s_colIndex = $_coleIndex;
+            foreach ($item as $key=>$value){
+                if($isMatched = preg_match('/http(?:s?):\/\//', $value)){
+                    $this->insertUrl(self::$s_rowIndex,self::$s_colIndex,$value);
+                }else{
+                    $this->insertText(self::$s_rowIndex,self::$s_colIndex,$value);
+                }
+                self::$s_colIndex++;
+            }
+            self::$s_rowIndex++;
+        }
     }
 }
