@@ -109,7 +109,8 @@ class Pxlswrite extends Excel
      */
     public function fileName($_fileName, $_tableName = 'sheet1')
     {
-        return parent::fileName($_fileName, $_tableName);
+        parent::fileName($_fileName, $_tableName);
+        return $this;
     }
 
     /**
@@ -146,10 +147,14 @@ class Pxlswrite extends Excel
             throw new DataFormatException('header数据格式错误,必须是一位数索引数组');
         }
         $this->m_header = $_header;
-        if (!is_resource($_formatHandler)) {
-            $_formatHandler = $this->styleFormat($_formatHandler);
+        if(!empty($_formatHandler)){
+            if (!is_resource($_formatHandler)) {
+                $_formatHandler = $this->styleFormat($_formatHandler);
+            }
+            parent::header($_header, $_formatHandler);
+        }else{
+            parent::header($_header);
         }
-        parent::header($_header, $_formatHandler);
         return $this;
     }
 
