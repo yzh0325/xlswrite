@@ -536,10 +536,15 @@ class Pxlswrite extends Excel
      */
     public function mergeCells($_scope, $_data, $_formatHandler = null)
     {
-        if (!is_resource($_formatHandler)) {
-            $_formatHandler = $this->styleFormat($_formatHandler);
+        if(!empty($_formatHandler)){
+            if (!is_resource($_formatHandler)) {
+                $_formatHandler = $this->styleFormat($_formatHandler);
+            }
+            parent::mergeCells($_scope, $_data, $_formatHandler);
+        }else{
+            parent::mergeCells($_scope, $_data);
         }
-        parent::mergeCells($_scope, $_data, $_formatHandler);
+
         return $this;
     }
 
@@ -549,14 +554,14 @@ class Pxlswrite extends Excel
      * @return $this
      * @throws DataFormatException
      */
-    public function defaultFormat($_formatHandler)
+    public function setDefaultStyle($_formatHandler)
     {
         if (!is_resource($_formatHandler)) {
             $this->m_defaultStyle = $_formatHandler;
             $_formatHandler = $this->styleFormat($_formatHandler);
         }
 
-        parent::defaultFormat($_formatHandler);
+//        parent::defaultFormat($_formatHandler);
         return $this;
     }
 

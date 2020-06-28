@@ -68,10 +68,11 @@ $orderField =  [
  * 订单数据导出demo
  */
 $filePath = $fileObj
-    ->defaultFormat(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
+    ->setDefaultStyle(['align'=>[Pxlswrite::FORMAT_ALIGN_CENTER,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])//全局默认样式
     ->field($orderField)//设置字段&表格头
     ->setOrderData('generateOrderData',['order','time'],[],$pushHandle)
-    ->setColumn('A:B',50)
+    ->setColumn('A:A',50,['align'=>[Pxlswrite::FORMAT_ALIGN_LEFT,Pxlswrite::FORMAT_ALIGN_VERTICAL_CENTER]])
+    ->setColumn('B:B',50)
     ->setColumn('F:F',50)
     ->output();//输出excel文件到磁盘
 
