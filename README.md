@@ -260,30 +260,30 @@ $style = [
  样式设置的相关方法
 ```
 /**
- * 行单元格样式
- * @param string $range  单元格范围
- * @param double $height 单元格高度
- * @param resource|array $formatHandler  单元格样式
- * @return $this
- * @throws \Exception
- */
-setRow($range, $height, $formatHandler = null);
-/**
- * 列单元格样式
- * @param $range string 单元格范围
- * @param $width double 单元格宽度
- * @param null $formatHandler resource|array 单元格样式
- * @return $this
- * @throws \Exception
- */
-setColumn($range, $width, $formatHandler = null)
-/**
- * 全局默认样式
- * @param resource|array $formatHandler style
+ *  行单元格样式
+ * @param string $_range 单元格范围
+ * @param int|double $_height 单元格高度  -1 默认行高13.5镑
+ * @param resource|array $_formatHandler 单元格样式
  * @return $this
  * @throws DataFormatException
  */
-defaultFormat($formatHandler)
+setRow($range, $height = -1, $formatHandler = null);
+ /**
+ * 列单元格样式
+ * @param string $_range 单元格范围  e.g.  'A:C'
+ * @param int|double $_width 单元格宽度  -1 自适列宽
+ * @param resource|array $_formatHandler 单元格样式
+ * @return $this
+ * @throws DataFormatException
+ */
+setColumn($range, $width = -1, $formatHandler = null)
+/**
+ * 全局默认样式 对setRow,setColumn,insertUrl,insertText方法有效
+ * @param resource|array $_formatHandler style
+ * @return $this
+ * @throws DataFormatException
+ */
+setDefaultStyle($formatHandler)
  /**
  * 合并单元格
  * @param string $scope   单元格范围
@@ -312,48 +312,48 @@ $filePath = $fileObj->fileName('123.xlsx','sheet1')
 通过回调生成器方法，逐行插入数据（一般通用数据）
 ```
 /**
-* @todo 设置一般数据 通过回调生成器逐行向表格插入数据，
-* 设置过field才支持动态单元格合并，
-* 可以根据指定的字段 通过值比较自动进行 行合并
-* @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
-* [['id'=>1,'name'=>'张三','age'=>'18']]
-* @param array $_mergeColumn 需要合并的字段
-* @param array $_mergeColumnStyle 合并单元格的样式
-* @param int $_index 单元格行偏移量 合并单元格的起始位置
-* @param WebSocketClient|null $_pushHandle
-* @return Pxlswrite
-* @throws DataFormatException 数据格式错误
-*/
+ * 设置一般数据 通过生成器逐行向表格插入数据，
+ * 设置过field才支持动态单元格合并，
+ * 可以根据指定的字段 通过值比较自动进行 行合并
+ * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
+ * [['id'=>1,'name'=>'张三','age'=>'18']]
+ * @param array $_mergeColumn 需要合并的字段
+ * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
+ * @param int $_index 单元格行偏移量 合并单元格的起始位置
+ * @param WebSocketClient|null $_pushHandle
+ * @return Pxlswrite
+ * @throws DataFormatException 数据格式错误
+ */
 function setGeneralData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
 通过回调生成器方法，逐行插入数据（订单类型数据）
 ```
-/**
-* @todo 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
-* @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
-* [
-*    [
-*        'order'=>'20200632555' ,
-*        'time'=>'2020-06-30 12:30:10',
-*        'username'=>'张三',
-*        'address'=>'成都',
-*        'phone'=>'17756891562',
-*        'item'=> [
-*            [
-*                'itemnumer'=>'2020515',
-*                'productname'=>'商品1',
-*                'mark'=>'备注',
-*            ],
-*        ],
-*    ]
-* ];
-* @param array $_mergeColumn 需要合并的字段
-* @param array $_mergeColumnStyle 合并单元格样式
-* @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
-* @param int $_index 单元格行偏移量 合并单元格的起始位置
-* @return $this
-* @throws DataFormatException 数据格式错误
-*/
+ /**
+ * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
+ * @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
+ * [
+ *    [
+ *        'order'=>'20200632555' ,
+ *        'time'=>'2020-06-30 12:30:10',
+ *        'username'=>'张三',
+ *        'address'=>'成都',
+ *        'phone'=>'17756891562',
+ *        'item'=> [
+ *            [
+ *                'itemnumer'=>'2020515',
+ *                'productname'=>'商品1',
+ *                'mark'=>'备注',
+ *            ],
+ *        ],
+ *    ]
+ * ];
+ * @param array $_mergeColumn 需要合并的字段
+ * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
+ * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
+ * @param int $_index 单元格行偏移量 合并单元格的起始位置
+ * @return $this
+ * @throws DataFormatException 数据格式错误
+ */
 function setOrderData($_generator, array $_mergeColumn = [], array $_mergeColumnStyle = [], WebSocketClient $_pushHandle = null, $_index = 1)
 ```
 逐行逐列插入数据，按单元格循环插入(可以区分文本插入和超链接插入，这种方式插入的数据，后面无法通过批量设置样式)
@@ -516,13 +516,13 @@ $data = [
  函数原型
 ```
 /**
- * @todo 通过生成器逐行向表格插入数据，
+ * 设置一般数据 通过生成器逐行向表格插入数据，
  * 设置过field才支持动态单元格合并，
  * 可以根据指定的字段 通过值比较自动进行 行合并
  * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
  * [['id'=>1,'name'=>'张三','age'=>'18']]
  * @param array $_mergeColumn 需要合并的字段
- * @param array $_mergeColumnStyle 合并单元格的样式
+ * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
  * @param int $_index 单元格行偏移量 合并单元格的起始位置
  * @param WebSocketClient|null $_pushHandle
  * @return Pxlswrite
@@ -578,7 +578,7 @@ function generateData(){
  *    ]
  * ];
  * @param array $_mergeColumn 需要合并的字段
- * @param array $_mergeColumnStyle 合并单元格样式
+ * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
  * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
  * @param int $_index 单元格行偏移量 合并单元格的起始位置
  * @return $this

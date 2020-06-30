@@ -85,6 +85,11 @@ class Pxlswrite extends Excel
      */
     public static $s_rowIndex = 1;
     /**
+     * 自适应列宽（各字段最大长度）
+     * @var array
+     */
+    public $m_autoSize = [];
+    /**
      * excel 列索引
      * @var int
      */
@@ -102,7 +107,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 创建工作表
+     *  创建工作表
      * @param string $_fileName
      * @param string $_tableName
      * @return mixed
@@ -114,7 +119,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 设置字段
+     *  设置字段
      * @param array $_field 字段定义数组 数据格式如下
      * [
      *  'name' => ['name' => '姓名','callback'=>'functionName'],
@@ -135,7 +140,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 设置表格头
+     *  设置表格头
      * @param array $_header
      * @param null $_formatHandler
      * @return mixed
@@ -145,6 +150,10 @@ class Pxlswrite extends Excel
     {
         if (count($_header) !== count($_header, 1)) {
             throw new DataFormatException('header数据格式错误,必须是一位数索引数组');
+        }
+        foreach ($_header as $k=>$v){
+            //初始化列宽
+            $this->m_autoSize[$k] = strlen($v);
         }
         $this->m_header = $_header;
         if(!empty($_formatHandler)){
@@ -159,23 +168,77 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 设置表格数据
+     *  设置表格数据
      * @param array $_data 二维索引数组
      * @return
      */
     public function data($_data)
     {
+        $this->calculateColumnWidth($_data);
         return parent::data($_data);
     }
 
     /**
-     * @todo 设置一般数据 通过生成器逐行向表格插入数据，
+     * 计算单元格字段宽度
+     * @param $_data
+     */
+    public function calculateColumnWidth($_data)
+    {
+        foreach ($_data as $k=>$v){
+            foreach ($v as $key=>$value){
+                $length = strlen($value);
+                $this->m_autoSize[$key] = $this->m_autoSize[$key] >= $length ? $this->m_autoSize[$key] : $length;
+            }
+        }
+    }
+
+    /**
+     * 设置单元格自适应列宽
+     * @param array $_range 单元列范围  e.g. ['A:B','C']
+     * @return $this
+     * @throws DataFormatException
+     */
+    public function setAutoSize(array $_range = [])
+    {
+        if(!empty($_range)){
+            //指定列自适应最大宽度
+            foreach($_range as $columns){
+                $columnArr = explode(':',$columns);
+                $start = strtoupper($columnArr[0]);
+                $end = strtoupper(end($columnArr));
+                for($i = $start;$i <= $end;$i++){
+                    $width = $this->getColumnMaxWidth($i);
+                    $this->setColumn($i.':'.$i,$width * 1.05);
+                }
+            }
+        }else{
+            //所有列自适应最大宽度
+            foreach ($this->m_autoSize as $key => $value){
+                $column = self::stringFromColumnIndex($key);
+                $this->setColumn($column.':'.$column,$value * 1.05);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * 获取单元列最大宽度
+     * @param string $_column
+     * @return mixed
+     */
+    public function getColumnMaxWidth(string $_column)
+    {
+        $columnIndex = self::columnIndexFromString($_column);
+        return $this->m_autoSize[$columnIndex];
+    }
+    /**
+     *  设置一般数据 通过生成器逐行向表格插入数据，
      * 设置过field才支持动态单元格合并，
      * 可以根据指定的字段 通过值比较自动进行 行合并
      * @param callable $_generator 回调数据生成器方法 返回的数据格式是二维数组 如下字段名数量不限
      * [['id'=>1,'name'=>'张三','age'=>'18']]
      * @param array $_mergeColumn 需要合并的字段
-     * @param array $_mergeColumnStyle 合并单元格的样式
+     * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @param WebSocketClient|null $_pushHandle
      * @return Pxlswrite
@@ -243,7 +306,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
+     * 设置订单数据 根据数据可以合并指定的字段,需要遵循以下数据格式
      * @param callable $_generator 数据生成器方法 返回数据格式如下，字段数量名称不限，只支持一个item二维数组
      * [
      *    [
@@ -262,7 +325,7 @@ class Pxlswrite extends Excel
      *    ]
      * ];
      * @param array $_mergeColumn 需要合并的字段
-     * @param array $_mergeColumnStyle 合并单元格样式
+     * @param array $_mergeColumnStyle 统一设置合并单元格的样式，设置后将无法修改样式，若要单独设置样式，参数应为空值，后续可用setColumn方式设置样式
      * @param WebSocketClient|null $_pushHandle WebSocketClient对象 用于推送进度
      * @param int $_index 单元格行偏移量 合并单元格的起始位置
      * @return $this
@@ -329,7 +392,7 @@ class Pxlswrite extends Excel
 
 
     /**
-     * @todo 字段过滤&格式化
+     *  字段过滤&格式化
      * @param array $_value 一维数组
      * @return array 处理之后的结果数组
      */
@@ -347,7 +410,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 游标读取excel，分段插入数据库
+     *  游标读取excel，分段插入数据库
      * @param callable $_func 方法名 回调数据插入的方法
      * @param WebSocketClient|null $_pushHandle
      * @param array $_dataType 可指定每个单元格数据类型进行读取
@@ -374,7 +437,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 消息推送
+     *  消息推送
      * @param $_pushHandle
      * @param $_count
      */
@@ -391,7 +454,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 文件下载
+     *  文件下载
      * @param string $_filePath 文件绝对路径
      * @param bool $_isDelete 下载后是否删除原文件
      * @throws PathException
@@ -421,7 +484,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 打开文件
+     *  打开文件
      * @param string $_fileName 文件名称
      * @return mixed
      */
@@ -431,7 +494,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 读取表格
+     *  读取表格
      * @param string $_fileName
      * @return mixed
      */
@@ -445,7 +508,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 写日志
+     *  写日志
      * @param string $_message
      * @param array $_arr
      */
@@ -460,7 +523,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 格式化样式
+     *  格式化样式
      * @param array $_style 样式列表数组
      * @return Format resource
      * @throws DataFormatException
@@ -493,41 +556,58 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 行单元格样式
+     *  行单元格样式
      * @param string $_range 单元格范围
-     * @param double $_height 单元格高度
+     * @param int|double $_height 单元格高度  -1 默认行高13.5镑
      * @param resource|array $_formatHandler 单元格样式
      * @return $this
      * @throws DataFormatException
      */
-    public function setRow($_range, $_height, $_formatHandler = null)
+    public function setRow($_range, $_height = -1, $_formatHandler = null)
     {
         if (!is_resource($_formatHandler)) {
             $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        parent::setRow($_range, $_height, $_formatHandler);
+        if($_height == -1){
+            parent::setRow($_range, 13.5, $_formatHandler);
+        }else{
+            parent::setRow($_range, $_height, $_formatHandler);
+        }
+
         return $this;
     }
 
     /**
-     * @todo 列单元格样式
-     * @param string $_range 单元格范围
-     * @param double $_width 单元格宽度
+     * 列单元格样式
+     * @param string $_range 单元格范围  e.g.  'A:C'
+     * @param int|double $_width 单元格宽度  -1 自适列宽
      * @param resource|array $_formatHandler 单元格样式
      * @return $this
      * @throws DataFormatException
      */
-    public function setColumn($_range, $_width, $_formatHandler = null)
+    public function setColumn($_range, $_width = -1, $_formatHandler = null)
     {
         if (!is_resource($_formatHandler)) {
             $_formatHandler = $this->styleFormat($_formatHandler);
         }
-        parent::setColumn($_range, $_width, $_formatHandler);
+        if($_width == -1){
+            //自适应列宽
+            $columnArr = explode(':',$_range);
+            $start = strtoupper($columnArr[0]);
+            $end = strtoupper(end($columnArr));
+            for($i = $start;$i <= $end;$i++) {
+                $_width = $this->getColumnMaxWidth($i) * 1.05;
+                parent::setColumn($i.':'.$i,$_width,$_formatHandler);
+            }
+        }else{
+            parent::setColumn($_range, $_width, $_formatHandler);
+        }
+
         return $this;
     }
 
     /**
-     * @todo 合并单元格
+     *  合并单元格
      * @param string $_scope 单元格范围
      * @param string $_data data
      * @param resource|array $_formatHandler 合并单元格的样式
@@ -549,7 +629,7 @@ class Pxlswrite extends Excel
     }
 
     /**
-     * @todo 全局默认样式
+     *  全局默认样式 对setRow,setColumn,insertUrl,insertText方法有效
      * @param resource|array $_formatHandler style
      * @return $this
      * @throws DataFormatException
