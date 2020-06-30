@@ -21,6 +21,7 @@ xlswriter文档<https://xlswriter-docs.viest.me/>
 		* [下载excel文件](#下载excel文件)
 		* [设置字段&表格头](#设置字段&表格头)
 		* [样式设置](#样式设置)
+		* [自适应单元格列宽](#自适应单元格列宽)
 		* [批量数据插入](#批量数据插入)
 		* [单元格](#单元格)
 			* [插入文字](#插入文字)
@@ -186,7 +187,36 @@ function ageFormat($v, $values)
     return date('Y') - $values['year'];
 }
 ```
+## 自适应单元格列宽
+函数原型
+```
+ /**
+ * 设置单元格自适应列宽
+ * @param array $_range 单元列范围  e.g. ['A:B','C'] 为空则默认所有单元列
+ * @return $this
+ * @throws DataFormatException
+ */
+setAutoSize(array $_range = [])
+```
+示例
+```
+use Pxlswrite\Pxlswrite;
 
+$fileObj = new Pxlswrite(['path' => __DIR__ . '/uploads']);
+$fileObj->fileName("setAutoSize.xlsx")
+    ->field([
+        'username' => ['name' => '用户名'],
+        'age' => ['name' => '年龄'],
+    ])
+    ->setGeneralData(function () {
+        yield [
+            ['username' => '焚膏继晷焚膏继晷', 'age' => 15],
+            ['username' => '演员', 'age' => 15],
+        ];
+    })
+    ->setAutoSize(['A'])//单元格自适应列宽
+    ->output();
+```
 ## 样式设置
 
 支持的样式如下：

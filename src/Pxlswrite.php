@@ -110,7 +110,7 @@ class Pxlswrite extends Excel
      *  创建工作表
      * @param string $_fileName
      * @param string $_tableName
-     * @return mixed
+     * @return $this
      */
     public function fileName($_fileName, $_tableName = 'sheet1')
     {
@@ -194,7 +194,7 @@ class Pxlswrite extends Excel
 
     /**
      * 设置单元格自适应列宽
-     * @param array $_range 单元列范围  e.g. ['A:B','C']
+     * @param array $_range 单元列范围  e.g. ['A:B','C'] 为空则默认所有单元列
      * @return $this
      * @throws DataFormatException
      */
