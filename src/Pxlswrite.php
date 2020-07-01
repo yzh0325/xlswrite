@@ -64,6 +64,7 @@ class Pxlswrite extends Excel
     /**********************************************样式常量*****************************************************/
     protected $m_config = [
         'path' => __DIR__,
+        'maxColumnWidth' => 50,
     ];
     /**
      * [$fieldsCallback 设置字段回调函数]
@@ -187,7 +188,11 @@ class Pxlswrite extends Excel
         foreach ($_data as $k=>$v){
             foreach ($v as $key=>$value){
                 $length = strlen($value);
-                $this->m_autoSize[$key] = $this->m_autoSize[$key] >= $length ? $this->m_autoSize[$key] : $length;
+                $size = $this->m_autoSize[$key] >= $length ? $this->m_autoSize[$key] : $length;
+                if($size > $this->m_config['maxColumnWidth']){
+                    $size = $this->m_config['maxColumnWidth'];
+                }
+                $this->m_autoSize[$key] = $size;
             }
         }
     }
