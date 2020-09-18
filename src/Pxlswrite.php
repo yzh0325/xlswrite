@@ -296,6 +296,14 @@ class Pxlswrite extends Excel
                 $count += count($item);
                 $this->push($_pushHandle, $count);
             }
+            //遍历到最后一行数据时，进行剩余还未合并单元行的单元行合并
+            foreach($cellKey as $c => $cell){
+                if($tempValue[$c]['count'] > 1){
+                    $startPosition = $cellMerge[$c][0];
+                    $endPosition = end($cellMerge[$c]);
+                    $this->mergeCells($startPosition . ':' . $endPosition, $tempValue[$c]['value'], $_mergeColumnStyle);
+                }
+            }
         } else {
             foreach (call_user_func($_generator) as $item) {
                 //循环逐行写入excel
